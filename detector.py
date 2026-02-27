@@ -2,7 +2,7 @@
 from ultralytics import YOLO
 
 class EcoDetector:
-    def __init__(self, model_path="yolov8n.pt"):
+    def __init__(self, model_path="yolo26n.pt"):
         # Load the model for detection
         self.model = YOLO(model_path)
         

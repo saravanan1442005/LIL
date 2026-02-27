@@ -7,7 +7,7 @@ from alert import save_violation
 
 def main():
     # 1. Initialize our modules
-    detector = EcoDetector(model_path="yolov8m.pt")
+    detector = EcoDetector(model_path="yolo26m.pt")
     tracker = EcoTracker()
     engine = EcoRuleEngine()
 
