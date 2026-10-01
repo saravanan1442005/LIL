@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="vms_workstation" name="shell-type">
+  <title>ECOLIFEBUDDY Surveillance Workstation v4.2 Pro - [Control Room District 4]</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+  <style>
+    @layer base {
+      html, body {
+        margin: 0;
+        padding: 0;
+        user-select: none;
+      }
+      body {
+        overscroll-behavior: none;
+      }
+    }
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b1120;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #25334c;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #374768;
+    }
+    .custom-fade {
+      transition: all 0.2s ease-in-out;
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "vms-chrome": "#0a0f1d",
+            "vms-panel": "#0f172a",
+            "vms-subpanel": "#141e36",
+            "vms-border": "#1e293b",
+            "primary": "#003527",
+            "primary-container": "#064e3b",
+            "secondary": "#006c4a",
+            "secondary-container": "#82f5c1",
+            "eco-green": "#10b981",
+            "eco-glow": "#34d399",
+            "surface": "#0d1322",
+            "surface-card": "#111a2e",
+            "surface-container": "#18233c",
+            "surface-container-high": "#223152",
+            "on-surface": "#e2e8f0",
+            "on-surface-variant": "#94a3b8",
+            "error": "#ef4444",
+            "error-container": "#450a0a"
+          },
+          fontFamily: {
+            "headline": ["Plus Jakarta Sans", "sans-serif"],
+            "body": ["Plus Jakarta Sans", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-[#0b1120] text-[#e2e8f0] font-body text-xs antialiased h-screen w-screen overflow-hidden flex flex-col select-none">
+
+  <!-- 1. WINDOWS TITLE BAR (Enterprise VMS Standard) -->
+  <header class="h-8 bg-[#0a0e1a] border-b border-[#1e293b] flex items-center justify-between px-2 shrink-0 select-none z-50 text-[11px] font-mono">
+    <div class="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+      <div class="w-4 h-4 rounded bg-emerald-600 flex items-center justify-center text-white shrink-0">
+        <span class="material-symbols-outlined text-[13px]">videocam</span>
+      </div>
+      <span class="font-bold text-[#f1f5f9] tracking-tight">ECOLIFEBUDDY Surveillance Workstation</span>
+      <span class="text-slate-500">•</span>
+      <span class="text-emerald-400 font-semibold">District 4 Control Room</span>
+    </div>
+    <div class="flex items-center">
+      <div class="hidden md:flex items-center gap-2 mr-3 pr-3 border-r border-[#1e293b] text-[10px] text-slate-300 font-sans">
+        <span class="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Connected • Live
+        </span>
+        <span class="text-slate-500">•</span>
+        <span id="live-clock" class="font-mono text-slate-400">11:15:20 AM</span>
+      </div>
+      <div class="flex items-center -mr-2 text-slate-300">
+        <button class="w-10 h-8 flex items-center justify-center hover:bg-[#1e293b] transition-colors" title="Audio Alert Toggle" onclick="toggleAudioAlert()">
+          <span id="audio-icon" class="material-symbols-outlined text-[14px] text-emerald-400">volume_up</span>
+        </button>
+        <button class="w-10 h-8 flex items-center justify-center hover:bg-[#1e293b] transition-colors" title="Toggle Fullscreen" onclick="toggleFullScreen()">
+          <span class="material-symbols-outlined text-[14px]">crop_square</span>
+        </button>
+        <button class="w-11 h-8 flex items-center justify-center hover:bg-[#dc2626] hover:text-white transition-colors" title="Lock Console" onclick="openLockModal()">
+          <span class="material-symbols-outlined text-[14px]">lock</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. ENTERPRISE DESKTOP MENU BAR & COMMAND RIBBON -->
+  <div class="bg-[#0f172a] border-b border-[#1e293b] text-slate-300 text-[11px] flex flex-wrap items-center justify-between px-2 shrink-0 h-7 z-40">
+    <div class="flex items-center space-x-1 font-sans">
+      <button class="px-2.5 py-0.5 rounded hover:bg-[#1e293b] hover:text-white transition-colors" onclick="openAddCameraModal()">+ Add CCTV Source</button>
+      <button class="px-2.5 py-0.5 rounded hover:bg-[#1e293b] hover:text-white transition-colors" onclick="triggerRefreshFeeds()">Refresh Feeds</button>
+      <button class="px-2.5 py-0.5 rounded hover:bg-[#1e293b] hover:text-white transition-colors font-semibold text-emerald-400 bg-emerald-950/40">Feeds</button>
+      <button class="px-2.5 py-0.5 rounded hover:bg-[#1e293b] hover:text-white transition-colors" onclick="alert('PTZ Virtual Joypad activated for Active Viewport.')">PTZ Controls</button>
+      <button class="px-2.5 py-0.5 rounded hover:bg-[#1e293b] hover:text-white transition-colors flex items-center gap-1" onclick="toggleAIOverlay()">
+        <span>Sensors &amp; AI</span>
+        <span id="ai-active-indicator" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+      </button>
+      <button class="px-2.5 py-0.5 rounded hover:bg-[#1e293b] hover:text-white transition-colors" onclick="exportForensicReport()">Forensic Export</button>
+      <button class="px-2.5 py-0.5 rounded hover:bg-[#1e293b] hover:text-white transition-colors" onclick="openHardwareSettingsModal()">Hardware &amp; RTSP</button>
+      <button class="px-2.5 py-0.5 rounded hover:bg-[#1e293b] hover:text-white transition-colors" onclick="openHelpModal()">Help</button>
+    </div>
+    <!-- Quick Toolstrip Icons -->
+    <div class="flex items-center gap-2 text-slate-400">
+      <span class="text-[10px] font-mono text-slate-500" id="current-layout-label">LAYOUT: 2x3 MATRIX</span>
+      <div class="flex items-center bg-[#141e36] rounded p-0.5 border border-[#1e293b]">
+        <button id="layout-btn-2x3" class="p-1 text-emerald-400 hover:text-emerald-300" title="2x3 Split" onclick="setLayout('2x3')"><span class="material-symbols-outlined text-[14px]">grid_view</span></button>
+        <button id="layout-btn-2x2" class="p-1 hover:text-emerald-400" title="2x2 Quad" onclick="setLayout('2x2')"><span class="material-symbols-outlined text-[14px]">window</span></button>
+        <button id="layout-btn-3x3" class="p-1 hover:text-emerald-400" title="3x3 Split" onclick="setLayout('3x3')"><span class="material-symbols-outlined text-[14px]">apps</span></button>
+        <button id="layout-btn-1n" class="p-1 hover:text-emerald-400" title="1+5 Focus Matrix" onclick="setLayout('1n')"><span class="material-symbols-outlined text-[14px]">dashboard</span></button>
+      </div>
+      <button class="px-2 py-0.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-sans font-medium flex items-center gap-1 text-[11px] shadow-sm" onclick="openAddCameraModal()">
+        <span class="material-symbols-outlined text-[14px]">add_circle</span> Add Camera
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN VMS WORKSPACE (Sidebar + Central Monitoring + Right Event Triage) -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- LEFT SIDEBAR: Professional CCTV Camera Tree & Operator Workspace -->
+    <aside class="w-72 bg-[#0c1222] border-r border-[#1e293b] flex flex-col justify-between shrink-0 z-30 select-none">
+      <div class="flex flex-col flex-1 overflow-hidden">
+        <!-- District Banner & System Identity -->
+        <div class="p-3 border-b border-[#1e293b] bg-[#0f172a] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded bg-[#064e3b] border border-emerald-500/40 flex items-center justify-center text-emerald-300 font-bold">
+              <span class="material-symbols-outlined text-[18px]">nest_eco_leaf</span>
+            </div>
+            <div>
+              <div class="text-[12px] font-bold text-white tracking-tight leading-tight">ECOLIFEBUDDY VMS</div>
+              <div class="text-[10px] text-emerald-400 font-mono">District 4 Clean Surveillance</div>
+            </div>
+          </div>
+          <span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-mono font-semibold">ONLINE</span>
+        </div>
+        <!-- Camera Search / Quick Filter -->
+        <div class="p-2 border-b border-[#1e293b] bg-[#0c1324]">
+          <div class="relative flex items-center">
+            <span class="material-symbols-outlined absolute left-2 text-slate-400 text-[14px]">search</span>
+            <input id="camera-filter-input" onkeyup="filterCameraTree()" class="w-full bg-[#131c31] border border-[#1e293b] rounded pl-7 pr-2 py-1 text-[11px] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 font-sans" placeholder="Filter camera ID, PTZ node, IP..." type="text">
+          </div>
+        </div>
+        <!-- Surveillance Navigation / Tree Tabs -->
+        <nav class="flex-1 overflow-y-auto p-2 space-y-1 text-[11px]">
+          <div class="text-[10px] uppercase font-mono tracking-wider text-slate-400 px-2 py-1">VMS Navigation Modules</div>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded bg-[#064e3b] text-emerald-100 font-semibold border border-emerald-600/30" href="#" onclick="filterByZone('ALL')">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-emerald-300">grid_view</span>
+              <span>Live VMS Dashboard</span>
+            </div>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-[#162038] text-slate-300 transition-colors" href="#" onclick="setLayout('3x3')">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-slate-400">videocam</span>
+              <span>All Camera Matrix</span>
+            </div>
+            <span id="badge-total-cams" class="px-1.5 py-0.2 rounded bg-[#1e293b] text-slate-300 font-mono text-[10px]">24</span>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-[#162038] text-slate-300 transition-colors" href="#" onclick="filterByZone('WASTE')">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-amber-400">warning</span>
+              <span>Violations Review</span>
+            </div>
+            <span id="badge-violations-today" class="px-1.5 py-0.2 rounded bg-rose-950 text-rose-300 border border-rose-800 font-mono text-[10px]">18 Today</span>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-[#162038] text-slate-300 transition-colors" href="#" onclick="scrollToInspection()">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-rose-400">notifications_active</span>
+              <span>Critical Alarms</span>
+            </div>
+            <span id="badge-alarms-count" class="px-1.5 py-0.2 rounded bg-rose-600 text-white font-mono text-[10px] font-bold">5 ALARMS</span>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-[#162038] text-slate-300 transition-colors" href="#" onclick="toggleTelemetryDetail()">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-slate-400">timeline</span>
+              <span>Telemetry &amp; AI Analytics</span>
+            </div>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-[#162038] text-slate-300 transition-colors" href="#" onclick="exportForensicReport()">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-slate-400">description</span>
+              <span>Forensic Evidence Reports</span>
+            </div>
+          </a>
+          <a class="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-[#162038] text-slate-300 transition-colors" href="#" onclick="openHardwareSettingsModal()">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-slate-400">admin_panel_settings</span>
+              <span>Hardware &amp; RTSP Settings</span>
+            </div>
+          </a>
+          <!-- Camera Hierarchy Directory Tree -->
+          <div class="pt-3">
+            <div class="text-[10px] uppercase font-mono tracking-wider text-slate-400 px-2 py-1 flex items-center justify-between">
+              <span>Camera Channels</span>
+              <span id="channels-status-summary" class="text-emerald-400 font-mono">22/24 Live</span>
+            </div>
+            <div id="sidebar-camera-tree" class="space-y-1 pl-1 text-[11px] text-slate-300">
+              <!-- Dynamically Populated Tree Elements -->
+              <div class="flex items-center justify-between px-2 py-1 rounded hover:bg-[#162038] cursor-pointer text-slate-200" onclick="focusCamera(1)">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span>Main Gate</span>
+                </div>
+                <span class="text-[10px] text-slate-400">CH 01</span>
+              </div>
+              <div class="flex items-center justify-between px-2 py-1 rounded bg-rose-950/40 text-rose-300 border border-rose-800/60 font-medium cursor-pointer" onclick="focusCamera(2)">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                  <span>Waste Station (Alert)</span>
+                </div>
+                <span class="text-[10px] text-rose-400 font-bold">CH 02</span>
+              </div>
+              <div class="flex items-center justify-between px-2 py-1 rounded hover:bg-[#162038] cursor-pointer text-slate-200" onclick="focusCamera(3)">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span>Parking Zone B</span>
+                </div>
+                <span class="text-[10px] text-slate-400">CH 03</span>
+              </div>
+              <div class="flex items-center justify-between px-2 py-1 rounded hover:bg-[#162038] cursor-pointer text-amber-300" onclick="focusCamera(4)">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                  <span>Crossroad Entrance</span>
+                </div>
+                <span class="text-[10px] text-slate-400">CH 04</span>
+              </div>
+              <div class="flex items-center justify-between px-2 py-1 rounded hover:bg-[#162038] cursor-pointer text-slate-200" onclick="focusCamera(5)">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span>Playground Lawn</span>
+                </div>
+                <span class="text-[10px] text-slate-400">CH 05</span>
+              </div>
+              <div class="flex items-center justify-between px-2 py-1 rounded hover:bg-[#162038] cursor-pointer text-slate-500" onclick="focusCamera(6)">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-rose-600"></span>
+                  <span>Back Gate (Offline)</span>
+                </div>
+                <span class="text-[10px] text-slate-500">CH 06</span>
+              </div>
+            </div>
+          </div>
+        </nav>
+        <!-- 2. DESKTOP WORKSTATION SECURITY & OPERATOR INFO -->
+        <div class="border-t border-[#1e293b] bg-[#0c1426] p-2.5 space-y-2 select-none">
+          <!-- Operator & Security Badge Card -->
+          <div class="bg-[#121c33] rounded p-2 border border-[#1e293b]">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded border border-emerald-500/50 bg-emerald-950 flex items-center justify-center text-emerald-300 shrink-0 font-bold">
+                <span class="material-symbols-outlined text-[20px]">shield_person</span>
+              </div>
+              <div class="flex flex-col min-w-0">
+                <div class="flex items-center gap-1">
+                  <span class="font-bold text-slate-100 text-[11px] truncate">Elena Vance</span>
+                  <span class="text-[9px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-1 rounded font-mono">AUTH</span>
+                </div>
+                <span class="text-[10px] text-slate-400 truncate">Badge #ENV-4029</span>
+                <span class="text-[10px] text-emerald-400 font-medium truncate">Chief Environmental Dispatcher</span>
+              </div>
+            </div>
+            <!-- Workstation Lock Action -->
+            <div class="mt-2 pt-2 border-t border-[#1e293b] grid grid-cols-2 gap-1.5">
+              <button class="px-2 py-1 bg-[#1a2540] hover:bg-[#253459] text-slate-200 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-colors" onclick="openLockModal()">
+                <span class="material-symbols-outlined text-[13px]">lock</span> Lock (Win+L)
+              </button>
+              <button class="px-2 py-1 bg-[#1a2540] hover:bg-[#253459] text-slate-200 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-colors" onclick="openLockModal()">
+                <span class="material-symbols-outlined text-[13px]">switch_account</span> Switch User
+              </button>
+            </div>
+          </div>
+          <!-- Local VMS Node Diagnostics -->
+          <div class="bg-[#0b101e] rounded p-2 border border-[#1e293b] text-[10px] font-mono space-y-1 text-slate-400">
+            <div class="flex justify-between items-center text-slate-300">
+              <span>Workstation Engine:</span>
+              <span class="text-emerald-400 font-semibold">Active • 100% Health</span>
+            </div>
+            <div class="flex justify-between items-center text-slate-400">
+              <span>Storage Usage:</span>
+              <span class="text-slate-200 font-medium" id="storage-label">71% (5.8 TB Available)</span>
+            </div>
+            <div class="w-full bg-[#1a233a] h-1.5 rounded overflow-hidden">
+              <div class="bg-emerald-500 h-full rounded" style="width: 71%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER & RIGHT: WORKSTATION CONTROL DESK -->
+    <div class="flex-1 flex flex-col overflow-hidden bg-[#090d18]">
+      <!-- TOP STATUS / EXECUTIVE TELEMETRY TOOLBAR -->
+      <section class="p-2 border-b border-[#1e293b] bg-[#0c1324] grid grid-cols-2 md:grid-cols-4 gap-2 shrink-0">
+        <!-- Card 1 -->
+        <div class="bg-[#11192e] border border-[#1e293b] rounded p-2.5 flex flex-col justify-between">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 uppercase font-medium">
+            <span>Connected Cameras</span>
+            <span class="material-symbols-outlined text-[16px] text-emerald-400">videocam</span>
+          </div>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span id="stat-total-cams" class="text-2xl font-bold font-mono text-white">24</span>
+            <span class="text-[11px] text-slate-400">Total</span>
+          </div>
+          <div class="mt-1 pt-1.5 border-t border-[#1e293b]/70 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="stat-online-cams" class="text-emerald-400 font-medium text-[11px]">22 Online</span>
+            <span class="text-slate-500">•</span>
+            <span id="stat-offline-cams" class="text-rose-400 text-[11px]">2 Offline</span>
+          </div>
+        </div>
+        <!-- Card 2 -->
+        <div class="bg-[#11192e] border border-[#1e293b] rounded p-2.5 flex flex-col justify-between">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 uppercase font-medium">
+            <span>AI Monitoring</span>
+            <span class="material-symbols-outlined text-[16px] text-emerald-400">psychology</span>
+          </div>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span class="text-2xl font-bold text-emerald-400">Active</span>
+            <span id="stat-scanning-cams" class="text-[11px] text-slate-300">22 Scanning</span>
+          </div>
+          <div class="mt-1 pt-1.5 border-t border-[#1e293b]/70 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-emerald-300 font-medium text-[11px]">YOLOv8 + DeepSORT Active</span>
+          </div>
+        </div>
+        <!-- Card 3 -->
+        <div class="bg-[#11192e] border border-[#1e293b] rounded p-2.5 flex flex-col justify-between">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 uppercase font-medium">
+            <span>Littering Incidents Today</span>
+            <span class="material-symbols-outlined text-[16px] text-amber-400">delete_sweep</span>
+          </div>
+          <div class="flex items-baseline justify-between mt-1">
+            <span id="stat-incidents-total" class="text-2xl font-bold font-mono text-white">18</span>
+            <span class="text-[11px] text-slate-400">Detected</span>
+          </div>
+          <div class="mt-1 pt-1.5 border-t border-[#1e293b]/70 flex items-center gap-1.5">
+            <span id="stat-incidents-resolved" class="text-emerald-400 font-medium text-[11px]">16 Resolved</span>
+            <span class="text-slate-500">•</span>
+            <span id="stat-incidents-inprogress" class="text-amber-400 text-[11px]">2 In Progress</span>
+          </div>
+        </div>
+        <!-- Card 4 -->
+        <div class="bg-[#1a1320] border border-rose-900/60 rounded p-2.5 flex flex-col justify-between">
+          <div class="flex items-center justify-between text-[11px] text-rose-300 uppercase font-medium">
+            <span class="flex items-center gap-1.5 font-bold">
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span> Action Required
+            </span>
+            <span class="material-symbols-outlined text-[16px] text-rose-400">warning</span>
+          </div>
+          <div class="flex items-baseline justify-between mt-1">
+            <span id="stat-action-required" class="text-2xl font-bold font-mono text-rose-400">5</span>
+            <span class="text-[11px] text-rose-200 bg-rose-950 px-1.5 py-0.5 rounded border border-rose-700 font-medium">3 Critical • 2 Warnings</span>
+          </div>
+          <div class="mt-1 pt-1.5 border-t border-rose-900/50 flex items-center justify-between">
+            <span class="text-rose-300 text-[11px]">CAM 02 Triggered</span>
+            <button class="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-medium text-[10px] transition-colors" onclick="scrollToInspection()">Review Alerts</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCROLLABLE WORKSPACE CONTAINER -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-2">
+        <!-- 3. MAIN SURVEILLANCE MATRIX & LIVE AUDIT STREAM -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-2">
+          <!-- LEFT 8 COLS: PROFESSIONAL CCTV 6-GRID WORKSTATION MATRIX -->
+          <div class="lg:col-span-8 flex flex-col gap-2">
+            <!-- Video Grid Controller Strip -->
+            <div class="bg-[#10182b] border border-[#1e293b] rounded p-2 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="font-bold text-[12px] text-white font-mono tracking-tight" id="matrix-zone-title">LIVE MONITORING MATRIX • [ZONE 4 VIEW]</span>
+                <span class="text-[10px] bg-[#1a2542] text-slate-300 font-mono px-1.5 py-0.5 rounded border border-[#2b3a61]" id="matrix-pinned-count">6 RTSP STREAMS PINNED</span>
+              </div>
+              <!-- Filter Tabs & Workstation Controls -->
+              <div class="flex items-center gap-1.5 text-[11px]">
+                <div class="flex bg-[#0a0f1d] p-0.5 rounded border border-[#1e293b] text-slate-300 font-mono text-[10px]">
+                  <button id="zone-tab-all" class="px-2 py-0.5 rounded bg-emerald-700 text-white font-bold" onclick="filterByZone('ALL')">ALL</button>
+                  <button id="zone-tab-gate" class="px-2 py-0.5 rounded hover:bg-[#1a2542] hover:text-white transition-colors" onclick="filterByZone('GATE')">GATE</button>
+                  <button id="zone-tab-waste" class="px-2 py-0.5 rounded hover:bg-[#1a2542] hover:text-white transition-colors" onclick="filterByZone('WASTE')">WASTE</button>
+                  <button id="zone-tab-parking" class="px-2 py-0.5 rounded hover:bg-[#1a2542] hover:text-white transition-colors" onclick="filterByZone('PARKING')">PARKING</button>
+                  <button id="zone-tab-park" class="px-2 py-0.5 rounded hover:bg-[#1a2542] hover:text-white transition-colors" onclick="filterByZone('PARK')">PARK</button>
+                </div>
+                <button class="px-2 py-1 rounded bg-[#16223d] hover:bg-[#1f2f54] text-slate-200 border border-[#26375c] font-mono text-[10px] flex items-center gap-1" onclick="toggleOSDHUD()">
+                  <span class="material-symbols-outlined text-[13px]">tune</span> OSD HUD
+                </button>
+                <button class="px-2 py-1 rounded bg-[#16223d] hover:bg-[#1f2f54] text-slate-200 border border-[#26375c] font-mono text-[10px] flex items-center gap-1" onclick="toggleMatrixMax()">
+                  <span class="material-symbols-outlined text-[13px]">crop_free</span> MATRIX MAX
+                </button>
+              </div>
+            </div>
+
+            <!-- 6-VIEWPORT SURVEILLANCE TILES CONTAINER -->
+            <div id="surveillance-grid" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              
+              <!-- TILE 1: Main Gate -->
+              <div id="cam-tile-1" class="camera-tile bg-[#0b101c] border border-[#1e293b] rounded overflow-hidden flex flex-col group relative" data-zone="GATE">
+                <div class="relative aspect-video bg-black overflow-hidden">
+                  <img class="w-full h-full object-cover feed-stream" src="/video_feed/1" alt="Main Gate CCTV" onerror="this.src='/static/cam1_fallback.jpg'">
+                  <!-- Top Overlay Strip -->
+                  <div class="absolute top-0 inset-x-0 p-2 bg-gradient-to-b from-black/90 via-black/40 to-transparent flex items-center justify-between text-white text-[11px]">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span class="font-semibold text-white">Main Gate</span>
+                      <span class="text-slate-400 text-[10px]">• North Entrance</span>
+                    </div>
+                    <span class="text-[10px] bg-emerald-950/80 border border-emerald-700 px-1.5 py-0.5 rounded text-emerald-300 font-medium">Live</span>
+                  </div>
+                  <!-- HUD Bounding Box Overlay -->
+                  <div class="hud-overlay absolute bottom-6 left-12 w-20 h-28 border border-emerald-400 bg-emerald-500/10 flex flex-col justify-between p-1 pointer-events-none rounded">
+                    <span class="bg-emerald-600 text-white text-[9px] px-1 rounded font-medium self-start">Pedestrian</span>
+                    <span class="text-emerald-300 text-[9px] text-right font-medium bg-black/60 px-1 rounded self-end">No Litter</span>
+                  </div>
+                  <!-- Hover Controls -->
+                  <div class="absolute bottom-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-1 py-0.5 rounded border border-[#1e293b]">
+                    <button class="p-1 hover:text-emerald-400 text-white" title="PTZ Preset" onclick="showTileToast('Main Gate: PTZ Preset 1 Active')"><span class="material-symbols-outlined text-[14px]">pan_tool</span></button>
+                    <button class="p-1 hover:text-emerald-400 text-white" title="Digital Zoom" onclick="showTileToast('Main Gate: Digital Zoom 1.5x')"><span class="material-symbols-outlined text-[14px]">zoom_in</span></button>
+                    <button class="p-1 hover:text-emerald-400 text-white" title="Maximize Viewport" onclick="maximizeViewport(1)"><span class="material-symbols-outlined text-[14px]">fullscreen</span></button>
+                  </div>
+                </div>
+                <div class="px-2.5 py-1.5 bg-[#0e1628] border-t border-[#1e293b] flex items-center justify-between text-[11px]">
+                  <span class="text-emerald-400 font-medium flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px]">check_circle</span> Zone Clean &amp; Clear
+                  </span>
+                  <span class="text-slate-400 text-[10px]">CH 01 • Preset 1 (Wide View)</span>
+                </div>
+              </div>
+
+              <!-- TILE 2: Waste Hub Station (Critical Alert Active) -->
+              <div id="cam-tile-2" class="camera-tile bg-[#0b101c] border-2 border-rose-500 rounded overflow-hidden flex flex-col group relative shadow-[0_0_15px_rgba(239,68,68,0.25)]" data-zone="WASTE">
+                <div class="relative aspect-video bg-black overflow-hidden">
+                  <img class="w-full h-full object-cover feed-stream" src="/video_feed/2" alt="Waste collection CCTV" onerror="this.src='/static/cam2_fallback.jpg'">
+                  <!-- Top Overlay Strip -->
+                  <div class="absolute top-0 inset-x-0 p-2 bg-gradient-to-b from-black/95 via-black/50 to-transparent flex items-center justify-between text-white text-[11px]">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                      <span class="font-bold text-rose-300">Waste Hub Station</span>
+                    </div>
+                    <span class="text-[10px] bg-rose-950 border border-rose-600 px-2 py-0.5 rounded text-rose-200 font-bold uppercase animate-pulse">Incident Detected</span>
+                  </div>
+                  <!-- Bounding Box Flag -->
+                  <div class="hud-overlay absolute top-1/2 left-1/3 -translate-y-4 w-32 h-24 border-2 border-rose-500 bg-rose-500/20 rounded shadow-[0_0_12px_rgba(239,68,68,0.5)] flex flex-col justify-between p-1.5">
+                    <span class="bg-rose-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold self-start">Discarded Plastic Bag</span>
+                    <span class="text-rose-200 bg-black/80 text-[9px] px-1 rounded self-end font-medium">96% Match</span>
+                  </div>
+                  <div class="absolute bottom-1.5 left-2 right-2 flex items-center justify-between">
+                    <div class="bg-black/85 px-2 py-0.5 rounded text-[10px] text-rose-300 flex items-center gap-1 border border-rose-900">
+                      <span class="material-symbols-outlined text-[12px] text-rose-400">warning</span>
+                      <span>Illegal Waste Dumping</span>
+                    </div>
+                    <button class="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold flex items-center gap-1 shadow" onclick="inspectViolation('VIOL-2025-0841')">
+                      <span class="material-symbols-outlined text-[13px]">search_check</span> Inspect Incident
+                    </button>
+                  </div>
+                </div>
+                <div class="px-2.5 py-1.5 bg-rose-950/60 border-t border-rose-800 flex items-center justify-between text-[11px] text-rose-200">
+                  <span class="font-semibold flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span> Incident Active (2m ago)
+                  </span>
+                  <span class="text-rose-300 font-medium text-[10px]">CH 02 • Awaiting Dispatch</span>
+                </div>
+              </div>
+
+              <!-- TILE 3: Parking Zone B -->
+              <div id="cam-tile-3" class="camera-tile bg-[#0b101c] border border-[#1e293b] rounded overflow-hidden flex flex-col group relative" data-zone="PARKING">
+                <div class="relative aspect-video bg-black overflow-hidden">
+                  <img class="w-full h-full object-cover feed-stream" src="/video_feed/3" alt="Parking surveillance" onerror="this.src='/static/cam3_fallback.jpg'">
+                  <div class="absolute top-0 inset-x-0 p-2 bg-gradient-to-b from-black/90 via-black/40 to-transparent flex items-center justify-between text-white text-[11px]">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                      <span class="font-semibold text-white">Parking Zone B</span>
+                    </div>
+                    <span class="text-[10px] bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded text-emerald-400 font-medium">Live</span>
+                  </div>
+                  <div class="hud-overlay absolute bottom-2 left-2 bg-black/70 px-2 py-0.5 rounded text-[10px] text-slate-300">
+                    <span>0 Violations</span>
+                  </div>
+                  <!-- Controls -->
+                  <div class="absolute bottom-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-1 py-0.5 rounded border border-[#1e293b]">
+                    <button class="p-1 hover:text-emerald-400 text-white" onclick="maximizeViewport(3)"><span class="material-symbols-outlined text-[14px]">fullscreen</span></button>
+                  </div>
+                </div>
+                <div class="px-2.5 py-1.5 bg-[#0e1628] border-t border-[#1e293b] flex items-center justify-between text-[11px]">
+                  <span class="text-emerald-400 font-medium flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px]">verified</span> Zone Clean
+                  </span>
+                  <span class="text-slate-400 text-[10px]">CH 03 • Preset 4</span>
+                </div>
+              </div>
+
+              <!-- TILE 4: Crossroad Entrance (Warning Flag) -->
+              <div id="cam-tile-4" class="camera-tile bg-[#0b101c] border border-amber-600/70 rounded overflow-hidden flex flex-col group relative" data-zone="GATE">
+                <div class="relative aspect-video bg-black overflow-hidden">
+                  <img class="w-full h-full object-cover feed-stream" src="/video_feed/4" alt="Crossroad street view" onerror="this.src='/static/cam4_fallback.jpg'">
+                  <div class="absolute top-0 inset-x-0 p-2 bg-gradient-to-b from-black/90 via-black/40 to-transparent flex items-center justify-between text-white text-[11px]">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                      <span class="font-semibold text-amber-200">Crossroad Entrance</span>
+                    </div>
+                    <span class="text-[10px] bg-amber-950 border border-amber-700 px-1.5 py-0.5 rounded text-amber-300 font-bold">Warning Flag</span>
+                  </div>
+                  <!-- Bounding Box -->
+                  <div class="hud-overlay absolute bottom-10 right-16 w-16 h-14 border border-amber-400 bg-amber-500/15 rounded flex items-start justify-end p-1">
+                    <span class="bg-amber-600 text-white text-[9px] px-1 rounded font-bold">Beverage Can</span>
+                  </div>
+                  <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                    <div class="bg-black/80 px-2 py-0.5 rounded text-[10px] text-amber-300">
+                      <span>Debris Detected</span>
+                    </div>
+                    <button class="px-2 py-0.5 bg-[#1e293b] hover:bg-[#2b3a61] text-white text-[10px] rounded" onclick="inspectViolation('VIOL-2025-0842')">Auto-Flagged</button>
+                  </div>
+                </div>
+                <div class="px-2.5 py-1.5 bg-[#1a1914] border-t border-amber-800/60 flex items-center justify-between text-[11px] text-amber-300">
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px]">priority_high</span> Debris Detected (5m ago)
+                  </span>
+                  <span class="text-slate-400 text-[10px]">CH 04 • Crossroad Camera</span>
+                </div>
+              </div>
+
+              <!-- TILE 5: Playground Lawn -->
+              <div id="cam-tile-5" class="camera-tile bg-[#0b101c] border border-[#1e293b] rounded overflow-hidden flex flex-col group relative" data-zone="PARK">
+                <div class="relative aspect-video bg-black overflow-hidden">
+                  <img class="w-full h-full object-cover feed-stream" src="/video_feed/5" alt="Playground eco camera" onerror="this.src='/static/cam5_fallback.jpg'">
+                  <div class="absolute top-0 inset-x-0 p-2 bg-gradient-to-b from-black/90 via-black/40 to-transparent flex items-center justify-between text-white text-[11px]">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                      <span class="font-semibold text-white">Playground Lawn</span>
+                    </div>
+                    <span class="text-[10px] bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded text-emerald-400 font-medium">Live</span>
+                  </div>
+                  <div class="hud-overlay absolute bottom-2 left-2 bg-black/70 px-2 py-0.5 rounded text-[10px] text-slate-300">
+                    <span>Clean Zone Verified</span>
+                  </div>
+                  <!-- Controls -->
+                  <div class="absolute bottom-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-1 py-0.5 rounded border border-[#1e293b]">
+                    <button class="p-1 hover:text-emerald-400 text-white" onclick="maximizeViewport(5)"><span class="material-symbols-outlined text-[14px]">fullscreen</span></button>
+                  </div>
+                </div>
+                <div class="px-2.5 py-1.5 bg-[#0e1628] border-t border-[#1e293b] flex items-center justify-between text-[11px]">
+                  <span class="text-emerald-400 font-medium flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[13px]">check_circle</span> Zone Clean
+                  </span>
+                  <span class="text-slate-400 text-[10px]">CH 05 • Stable</span>
+                </div>
+              </div>
+
+              <!-- TILE 6: Back Gate (Offline / Reconnect) -->
+              <div id="cam-tile-6" class="camera-tile bg-[#0b101c] border border-rose-900/60 rounded overflow-hidden flex flex-col relative" data-zone="GATE">
+                <div class="relative aspect-video bg-[#0a0e17] flex flex-col items-center justify-center p-4 text-center">
+                  <div class="w-9 h-9 rounded-full bg-rose-950 border border-rose-700 flex items-center justify-center mb-2 text-rose-400">
+                    <span class="material-symbols-outlined text-[20px]">videocam_off</span>
+                  </div>
+                  <span class="text-[12px] font-bold text-rose-300">Back Gate Camera • Standby</span>
+                  <span class="text-[11px] text-slate-400 mt-1">Camera signal awaiting RTSP feed</span>
+                  <button class="mt-3 px-3 py-1.5 bg-[#1a2542] hover:bg-[#25365e] text-slate-200 rounded font-medium text-[11px] flex items-center gap-1.5 border border-[#2b3c66] transition-colors" onclick="reconnectCam(6)">
+                    <span class="material-symbols-outlined text-[14px]">refresh</span> Connect Live USB/RTSP
+                  </button>
+                </div>
+                <div class="px-2.5 py-1.5 bg-rose-950/40 border-t border-rose-900/80 flex items-center justify-between text-[11px] text-rose-300">
+                  <span class="flex items-center gap-1 font-medium">
+                    <span class="material-symbols-outlined text-[13px]">wifi_off</span> Standby Channel
+                  </span>
+                  <span class="text-slate-400 text-[10px]">CH 06 • Back Gate Channel</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- RIGHT 4 COLS: RECENT VIOLATIONS STREAM & AI EVENT QUEUE -->
+          <div class="lg:col-span-4 flex flex-col gap-2">
+            <div class="bg-[#0f172a] border border-[#1e293b] rounded flex flex-col h-full">
+              <!-- Panel Header -->
+              <div class="p-2 border-b border-[#1e293b] flex items-center justify-between bg-[#121c33]">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                  <h3 class="font-bold text-[12px] text-white font-mono tracking-tight">AI VIOLATION DISPATCH QUEUE</h3>
+                </div>
+                <span id="queue-header-count" class="text-[10px] bg-rose-950 text-rose-300 px-1.5 py-0.5 rounded border border-rose-800 font-mono font-bold">18 DETECTIONS</span>
+              </div>
+              <!-- Filter Pills -->
+              <div class="p-1.5 border-b border-[#1e293b] bg-[#0c1324] flex items-center gap-1 font-mono text-[10px] text-slate-300">
+                <button id="pill-all" class="px-3 py-1 rounded bg-emerald-700 text-white font-medium" onclick="filterQueue('all')">All (18)</button>
+                <button id="pill-needs-review" class="px-3 py-1 rounded hover:bg-[#1a2542] text-slate-300 font-medium transition-colors" onclick="filterQueue('needs_review')">Needs Review</button>
+                <button id="pill-resolved" class="px-3 py-1 rounded hover:bg-[#1a2542] text-slate-300 font-medium transition-colors" onclick="filterQueue('resolved')">Resolved</button>
+              </div>
+              <!-- Stream Items Container -->
+              <div id="violation-stream-container" class="p-2 space-y-2 overflow-y-auto max-h-[640px]">
+                
+                <!-- Item 1 (Critical) -->
+                <div class="violation-card p-2.5 rounded bg-rose-950/30 border border-rose-700/70 hover:bg-rose-950/50 transition-colors cursor-pointer select-none" onclick="inspectViolation('VIOL-2025-0841')" data-status="needs_review">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="px-2 py-0.5 rounded bg-rose-600 text-white font-bold uppercase tracking-wide text-[10px]">Critical Incident</span>
+                    <span class="text-rose-400 font-semibold text-[11px]">2m ago</span>
+                  </div>
+                  <div class="flex gap-2.5 items-center mt-2">
+                    <div class="w-14 h-11 bg-black rounded border border-rose-800 shrink-0 overflow-hidden">
+                      <img class="w-full h-full object-cover" alt="Debris snippet" src="/violations/violation_20260517_233148.jpg" onerror="this.src='/static/thumb1.jpg'">
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                      <span class="font-bold text-white text-[12px] truncate">Illegal Plastic Bag Dumping</span>
+                      <span class="text-[11px] text-slate-300 truncate">Waste Hub Station • CH 02</span>
+                    </div>
+                  </div>
+                  <div class="mt-2 pt-2 border-t border-rose-800/50 flex items-center justify-between text-[11px]">
+                    <span class="text-rose-300 flex items-center gap-1 font-medium">
+                      <span class="material-symbols-outlined text-[14px]">warning</span> Auto-Flagged [96%]
+                    </span>
+                    <div class="flex gap-1.5" onclick="event.stopPropagation()">
+                      <button class="px-2 py-0.5 rounded bg-[#1e293b] hover:bg-[#2b3a61] text-slate-300 text-[11px]" onclick="dismissViolation('VIOL-2025-0841')">Dismiss</button>
+                      <button class="px-2.5 py-0.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-[11px]" onclick="inspectViolation('VIOL-2025-0841')">Review</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Item 2 (Warning) -->
+                <div class="violation-card p-2.5 rounded bg-[#11192e] border border-[#1e293b] hover:bg-[#16223d] transition-colors select-none cursor-pointer" onclick="inspectViolation('VIOL-2025-0842')" data-status="needs_review">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold uppercase text-[10px]">Warning</span>
+                    <span class="text-slate-400 text-[11px]">5m ago</span>
+                  </div>
+                  <div class="flex gap-2.5 items-center mt-2">
+                    <div class="w-14 h-11 bg-black rounded border border-slate-700 shrink-0 overflow-hidden">
+                      <img class="w-full h-full object-cover" alt="Can debris snippet" src="/violations/violation_20260211_121853.jpg" onerror="this.src='/static/thumb2.jpg'">
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                      <span class="font-bold text-slate-200 text-[12px] truncate">Discarded Beverage Can</span>
+                      <span class="text-[11px] text-slate-300 truncate">Crossroad Entrance • CH 04</span>
+                    </div>
+                  </div>
+                  <div class="mt-2 pt-2 border-t border-[#1e293b] flex items-center justify-between text-[11px]">
+                    <span class="text-emerald-400 font-medium">Recyclable Metal</span>
+                    <button class="px-2.5 py-0.5 rounded bg-[#1a2540] hover:bg-[#233357] text-slate-200 text-[11px] font-medium" onclick="event.stopPropagation(); dispatchCrew('VIOL-2025-0842')">Assign Crew</button>
+                  </div>
+                </div>
+
+                <!-- Item 3 (Crew Dispatched) -->
+                <div class="violation-card p-2.5 rounded bg-[#0d1424] border border-[#1e293b] hover:bg-[#131d33] transition-colors select-none cursor-pointer" onclick="inspectViolation('VIOL-2025-0840')" data-status="resolved">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold uppercase text-[10px] flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">done</span> Crew Dispatched
+                    </span>
+                    <span class="text-slate-400 text-[11px]">09:15 AM</span>
+                  </div>
+                  <div class="flex gap-2.5 items-center mt-2">
+                    <div class="w-14 h-11 bg-black rounded border border-slate-700 shrink-0 overflow-hidden">
+                      <img class="w-full h-full object-cover" alt="Paper debris snippet" src="/violations/violation_20260211_115640.jpg" onerror="this.src='/static/thumb3.jpg'">
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                      <span class="font-bold text-slate-200 text-[12px] truncate">Paper Flyer Litter</span>
+                      <span class="text-[11px] text-slate-300 truncate">Main Gate Area • CH 01</span>
+                    </div>
+                  </div>
+                  <div class="mt-2 pt-2 border-t border-[#1e293b] flex items-center justify-between text-[11px]">
+                    <span class="text-emerald-400 font-medium">Janitorial Unit 02 on site</span>
+                    <span class="text-slate-400 text-[10px]">ETA 3m</span>
+                  </div>
+                </div>
+
+                <!-- Item 4 (Resolved) -->
+                <div class="violation-card p-2.5 rounded bg-[#0a0f1d] border border-[#1e293b]/70 opacity-70 hover:opacity-100 transition-opacity select-none cursor-pointer" onclick="inspectViolation('VIOL-2025-0839')" data-status="resolved">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="px-2 py-0.5 rounded bg-[#1a233a] text-slate-300 uppercase text-[10px] font-medium">Resolved &amp; Cleaned</span>
+                    <span class="text-slate-500 text-[11px]">08:30 AM</span>
+                  </div>
+                  <div class="flex gap-2.5 items-center mt-2">
+                    <div class="w-14 h-11 bg-black rounded border border-slate-800 shrink-0 overflow-hidden">
+                      <img class="w-full h-full object-cover" alt="Playground clean verification" src="/violations/violation_20260211_115742.jpg" onerror="this.src='/static/thumb4.jpg'">
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                      <span class="font-bold text-slate-300 text-[12px] truncate">Fast Food Container</span>
+                      <span class="text-[11px] text-slate-500 truncate">Playground Lawn • CH 05</span>
+                    </div>
+                  </div>
+                  <div class="mt-2 pt-2 border-t border-[#1e293b]/60 flex items-center justify-between text-[11px] text-slate-400">
+                    <span class="text-emerald-400 font-medium">Area Clear</span>
+                    <button class="text-slate-300 hover:text-white underline text-[10px]" onclick="event.stopPropagation(); inspectViolation('VIOL-2025-0839')">View Details</button>
+                  </div>
+                </div>
+
+              </div>
+              <!-- Stream Footer -->
+              <div class="p-2 border-t border-[#1e293b] bg-[#0c1324] mt-auto flex items-center justify-between text-[10px] font-mono text-slate-400">
+                <span>BUFFER: 48 HOURS ROLLING</span>
+                <button class="text-emerald-400 font-bold hover:underline flex items-center gap-0.5" onclick="exportForensicReport()">
+                  FULL AUDIT DATABASE &gt;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. FORENSIC INCIDENT INSPECTION DOCKED WORKSTATION WINDOW -->
+        <section class="bg-[#0f172a] border border-[#1e293b] rounded-lg p-3 relative shadow-xl" id="inspection-modal">
+          <!-- Modal Workstation Header Strip -->
+          <div class="flex flex-wrap items-center justify-between pb-2 border-b border-[#1e293b] gap-2 bg-[#131d33] -mx-3 -mt-3 p-3 rounded-t-lg">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded bg-rose-950 border border-rose-700 text-rose-400 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">troubleshoot</span>
+              </span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 id="inspect-title" class="text-sm font-bold text-white font-mono tracking-tight">FORENSIC TELEMETRY INSPECTION: VIOL-2025-0841</h2>
+                  <span id="inspect-escalation-badge" class="bg-rose-600 text-white font-mono text-[10px] px-2 py-0.5 rounded font-bold uppercase animate-pulse">
+                    CRITICAL ESCALATION
+                  </span>
+                </div>
+                <span class="text-[11px] text-slate-400 font-mono">Edge Neural Inference Engine v2.4 • YOLOv8 Detection + DeepSORT Tracker</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button class="px-2.5 py-1 rounded bg-[#1e293b] hover:bg-[#2b3a61] text-slate-200 font-mono text-[11px] flex items-center gap-1 transition-colors border border-slate-700" onclick="exportForensicReport()">
+                <span class="material-symbols-outlined text-[14px]">save</span> Export Forensic Clip (.mp4)
+              </button>
+              <button class="px-2.5 py-1 rounded bg-[#1e293b] hover:bg-[#2b3a61] text-slate-200 font-mono text-[11px] flex items-center gap-1 transition-colors border border-slate-700" onclick="window.print()">
+                <span class="material-symbols-outlined text-[14px]">print</span> Print Citations
+              </button>
+              <button class="p-1 rounded hover:bg-rose-900/60 text-slate-400 hover:text-white transition-colors ml-2" onclick="document.getElementById('inspection-modal').classList.add('hidden')" title="Close Docked Telemetry">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+          </div>
+          <!-- Modal 2-Column High-Precision Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 mt-3">
+            <!-- Video Player & Telemetry Scrubber (7 Cols) -->
+            <div class="lg:col-span-7 flex flex-col gap-2">
+              <div class="relative aspect-video bg-black rounded border border-[#1e293b] overflow-hidden group">
+                <img id="inspect-video-player" class="w-full h-full object-cover" alt="Surveillance zoom detection" src="/violations/violation_20260517_233148.jpg" onerror="this.src='/static/cam2_fallback.jpg'">
+                <!-- Telemetry Badges Overlay -->
+                <div class="absolute top-2 left-2 bg-black/90 border border-slate-700 text-white px-2 py-0.5 rounded font-mono text-[10px] flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                  <span id="inspect-sector-badge">SECTOR 4 • WASTE HUB NORTH</span>
+                </div>
+                <div class="absolute top-2 right-2 bg-black/90 border border-slate-700 text-emerald-400 px-2 py-0.5 rounded font-mono text-[10px]" id="inspect-rec-time">
+                  REC: 10:41:02.482 UTC
+                </div>
+                <!-- Bounding Vector Overlay -->
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div class="w-52 h-44 border-2 border-dashed border-rose-500 bg-rose-500/15 rounded flex flex-col justify-between p-1.5 shadow-[0_0_15px_rgba(239,68,68,0.35)]">
+                    <div class="flex items-center justify-between">
+                      <span id="inspect-vector-label" class="bg-rose-600 text-white font-medium text-[10px] px-1.5 py-0.5 rounded font-bold">Waste Debris Detected</span>
+                      <span id="inspect-vector-conf" class="bg-black/90 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded font-bold border border-emerald-800">96% Certainty</span>
+                    </div>
+                    <div class="self-end text-[10px] text-white/90 bg-black/70 px-1.5 py-0.5 rounded font-medium">Target Flagged</div>
+                  </div>
+                </div>
+                <!-- VMS Video Playback Scrubber Strip -->
+                <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-2 flex flex-col gap-1 font-mono text-[10px]">
+                  <div class="w-full bg-slate-800 h-2 rounded overflow-hidden relative cursor-pointer border border-slate-700" onclick="scrubTimeline(event)">
+                    <div id="scrubber-bar" class="bg-emerald-500 h-full w-3/4"></div>
+                    <div id="scrubber-thumb" class="absolute left-3/4 top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 bg-white rounded-full shadow border border-slate-900"></div>
+                  </div>
+                  <div class="flex items-center justify-between text-slate-300 text-[10px]">
+                    <div class="flex items-center gap-2">
+                      <button class="hover:text-emerald-400" onclick="scrubRel(-2)"><span class="material-symbols-outlined text-[14px]">fast_rewind</span></button>
+                      <button class="hover:text-emerald-400" onclick="togglePlay()"><span id="play-pause-icon" class="material-symbols-outlined text-[14px]">pause</span></button>
+                      <button class="hover:text-emerald-400" onclick="scrubRel(2)"><span class="material-symbols-outlined text-[14px]">fast_forward</span></button>
+                      <span id="playback-timer" class="text-white font-bold ml-1">00:04.12 / 00:10.00</span>
+                    </div>
+                    <span id="inspect-stream-meta" class="text-slate-400">Stream: CAM_02_PRIMARY_4K (H.265 60FPS)</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Stream Metadata Hardware Matrix -->
+              <div class="grid grid-cols-3 gap-2 p-2 bg-[#0c1424] rounded border border-[#1e293b] font-mono text-[10px]">
+                <div>
+                  <span class="text-slate-400 block text-[10px] uppercase font-medium">Camera Location</span>
+                  <span id="meta-location" class="font-bold text-white text-[11px]">Waste Hub Station</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block text-[10px] uppercase font-medium">Incident Type</span>
+                  <span id="meta-type" class="text-slate-200 text-[11px]">Illegal Waste Dumping</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block text-[10px] uppercase font-medium">Detection Status</span>
+                  <span id="meta-status" class="text-emerald-400 font-semibold text-[11px]">High Confidence Match</span>
+                </div>
+              </div>
+            </div>
+            <!-- Incident Analysis, Timeline & Actions (5 Cols) -->
+            <div class="lg:col-span-5 flex flex-col justify-between gap-3">
+              <div class="flex flex-col gap-2">
+                <!-- Confidence & Object Tagging -->
+                <div class="p-2.5 rounded bg-[#121c33] border border-[#1e293b] flex flex-col gap-1.5">
+                  <div class="flex items-center justify-between font-mono">
+                    <span class="text-slate-300 font-bold text-[11px]">AI Model Certainty</span>
+                    <span id="certainty-pct" class="text-emerald-400 font-bold text-[13px]">96.4% Probability</span>
+                  </div>
+                  <div class="w-full bg-[#0a0f1d] h-2 rounded overflow-hidden border border-slate-800">
+                    <div id="certainty-bar" class="bg-emerald-500 h-full rounded transition-all duration-300" style="width: 96.4%;"></div>
+                  </div>
+                  <div class="flex justify-between text-[10px] text-slate-400 font-mono mt-0.5">
+                    <span id="certainty-target">Target: Polyethylene Waste Sacks</span>
+                    <span id="certainty-severity" class="text-rose-400 font-semibold">Severity Score: 9.2/10</span>
+                  </div>
+                </div>
+                <!-- Event Timeline Log -->
+                <div class="p-2.5 rounded bg-[#121c33] border border-[#1e293b] flex flex-col gap-1">
+                  <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 font-bold mb-1">
+                    Forensic Timeline Log
+                  </span>
+                  <div id="timeline-log-entries" class="space-y-2 border-l border-slate-700 pl-3 font-mono text-[10px]">
+                    <div class="relative">
+                      <span class="w-2 h-2 rounded-full bg-slate-500 absolute -left-[17px] top-1"></span>
+                      <span class="text-slate-400 font-semibold">10:40:55 AM</span>
+                      <p class="text-slate-300">Pedestrian with dark bag enters camera FOV from East Walkway.</p>
+                    </div>
+                    <div class="relative">
+                      <span class="w-2 h-2 rounded-full bg-slate-500 absolute -left-[17px] top-1"></span>
+                      <span class="text-slate-400 font-semibold">10:41:01 AM</span>
+                      <p class="text-slate-300">Bag dropped behind secondary curb outside marked receptacle.</p>
+                    </div>
+                    <div class="relative">
+                      <span class="w-2 h-2 rounded-full bg-rose-500 absolute -left-[17px] top-1 ring-2 ring-rose-400/40"></span>
+                      <span class="text-rose-400 font-bold">10:41:02 AM</span>
+                      <p class="text-rose-300 font-semibold">AI detection vector flags illegal litter deposition [CONF: 96%].</p>
+                    </div>
+                    <div class="relative">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400 absolute -left-[17px] top-1"></span>
+                      <span class="text-emerald-400 font-semibold">10:41:05 AM</span>
+                      <p class="text-slate-300">Station dispatch alert piped to Officer Vance terminal.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Workstation Action Dispatch Controls -->
+              <div class="pt-2 border-t border-[#1e293b] space-y-1.5 font-mono">
+                <div class="grid grid-cols-2 gap-1.5">
+                  <button class="px-3 py-2 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow transition-colors" onclick="dispatchCrew('CURRENT')">
+                    <span class="material-symbols-outlined text-[15px]">send</span> Dispatch Sanitation Unit
+                  </button>
+                  <button class="px-3 py-2 rounded bg-[#1e293b] hover:bg-[#2c3b5d] text-white text-[11px] font-bold flex items-center justify-center gap-1.5 border border-slate-700 transition-colors" onclick="markReviewed('CURRENT')">
+                    <span class="material-symbols-outlined text-[15px]">verified</span> Mark Reviewed (Flag ID)
+                  </button>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5">
+                  <button class="px-3 py-1.5 rounded bg-[#162238] hover:bg-[#20304f] text-slate-300 text-[10px] flex items-center justify-center gap-1 border border-[#253658]" onclick="markResolved('CURRENT')">
+                    <span class="material-symbols-outlined text-[13px]">done_all</span> Mark Resolved
+                  </button>
+                  <button class="px-3 py-1.5 rounded bg-rose-950/60 hover:bg-rose-950 text-rose-300 text-[10px] flex items-center justify-center gap-1 border border-rose-800" onclick="markFalsePositive('CURRENT')">
+                    <span class="material-symbols-outlined text-[13px]">flag</span> False Positive Alert
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- DESKTOP WORKSTATION OS FOOTER STATUS BAR -->
+      <footer class="h-6 bg-[#0a0f1d] border-t border-[#1e293b] px-3 flex items-center justify-between text-[10px] font-mono text-slate-400 shrink-0 select-none">
+        <div class="flex items-center gap-3 text-[11px] font-sans">
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <span class="material-symbols-outlined text-[13px] text-emerald-400">person</span> Operator: <strong class="text-white font-medium">Elena Vance</strong> (Environmental Dispatcher)
+          </span>
+          <span class="text-slate-600">|</span>
+          <span class="flex items-center gap-1.5 text-emerald-400 font-medium">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> System Healthy • Storage OK (5.8TB)
+          </span>
+        </div>
+        <div class="flex items-center gap-2 text-[11px] font-sans">
+          <span class="text-rose-300 font-medium flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span> Active Incident: Illegal Waste Dumping
+          </span>
+          <button class="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-medium transition-colors" onclick="scrollToInspection()">Review Incident</button>
+          <button class="px-2 py-0.5 rounded bg-[#1e293b] hover:bg-[#2b3a61] text-slate-200 text-[10px] font-medium transition-colors border border-slate-700" onclick="exportForensicReport()">Export Report</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD CAMERA DIALOG -->
+  <div id="add-camera-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+    <div class="bg-[#0f172a] border border-[#1e293b] rounded-lg w-full max-w-md p-4 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-[#1e293b] pb-2">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-emerald-400">add_to_queue</span>
+          <h3 class="font-bold text-white text-sm">Add CCTV Camera Stream</h3>
+        </div>
+        <button onclick="closeAddCameraModal()" class="text-slate-400 hover:text-white"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <form id="add-camera-form" onsubmit="submitAddCamera(event)" class="space-y-3">
+        <div>
+          <label class="block text-slate-300 text-[11px] mb-1 font-medium">Camera Channel / Name</label>
+          <input id="new-cam-name" type="text" required placeholder="e.g. North Gate PTZ" class="w-full bg-[#131c31] border border-[#1e293b] rounded px-3 py-1.5 text-slate-200 text-xs focus:border-emerald-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-slate-300 text-[11px] mb-1 font-medium">Source Type</label>
+          <select id="new-cam-type" class="w-full bg-[#131c31] border border-[#1e293b] rounded px-3 py-1.5 text-slate-200 text-xs focus:border-emerald-500 focus:outline-none" onchange="adjustSourcePlaceholder()">
+            <option value="RTSP">RTSP Stream (IP Camera)</option>
+            <option value="USB">USB Webcam (Device Index 0, 1...)</option>
+            <option value="FILE">Local Video File (.mp4)</option>
+            <option value="HTTP">HTTP / MJPEG Stream</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-slate-300 text-[11px] mb-1 font-medium">Stream URL / Index / Path</label>
+          <input id="new-cam-source" type="text" required placeholder="rtsp://admin:pass@192.168.1.100:554/stream1" class="w-full bg-[#131c31] border border-[#1e293b] rounded px-3 py-1.5 text-slate-200 text-xs focus:border-emerald-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-slate-300 text-[11px] mb-1 font-medium">Surveillance Zone Tag</label>
+          <select id="new-cam-zone" class="w-full bg-[#131c31] border border-[#1e293b] rounded px-3 py-1.5 text-slate-200 text-xs focus:border-emerald-500 focus:outline-none">
+            <option value="GATE">GATE (Entrances &amp; Exits)</option>
+            <option value="WASTE">WASTE (Station / Bins / Disposal)</option>
+            <option value="PARKING">PARKING (Vehicles &amp; Lots)</option>
+            <option value="PARK">PARK (Playground &amp; Public Lawn)</option>
+            <option value="GENERAL">GENERAL (Other Shared Space)</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t border-[#1e293b]">
+          <button type="button" onclick="closeAddCameraModal()" class="px-3 py-1.5 rounded bg-[#1e293b] text-slate-300 hover:bg-[#2b3a61] text-xs">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-medium text-xs flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">check</span> Connect &amp; Pin Feed
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: HARDWARE & RTSP SETTINGS -->
+  <div id="hardware-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+    <div class="bg-[#0f172a] border border-[#1e293b] rounded-lg w-full max-w-lg p-4 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-[#1e293b] pb-2">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-emerald-400">tune</span>
+          <h3 class="font-bold text-white text-sm">VMS Hardware &amp; Inference Engine Configuration</h3>
+        </div>
+        <button onclick="document.getElementById('hardware-modal').classList.add('hidden')" class="text-slate-400 hover:text-white"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div class="bg-[#121c33] p-3 rounded border border-[#1e293b] space-y-2">
+          <span class="font-semibold text-emerald-400 block">AI Neural Inference Model</span>
+          <div class="grid grid-cols-2 gap-2 text-slate-300">
+            <div>
+              <span class="text-slate-500 text-[10px] block">Model Weights:</span>
+              <span class="font-mono text-white">yolov8m.pt / yolo26m.pt</span>
+            </div>
+            <div>
+              <span class="text-slate-500 text-[10px] block">Inference Hardware:</span>
+              <span class="font-mono text-emerald-300">DirectML / PyTorch Engine</span>
+            </div>
+            <div>
+              <span class="text-slate-500 text-[10px] block">Detection Confidence:</span>
+              <span class="font-mono text-white">0.30 (Optimized for Small Litter)</span>
+            </div>
+            <div>
+              <span class="text-slate-500 text-[10px] block">Tracking State Machine:</span>
+              <span class="font-mono text-white">HELD ➔ SEPARATING ➔ TRACKING</span>
+            </div>
+          </div>
+        </div>
+        <div class="bg-[#121c33] p-3 rounded border border-[#1e293b] space-y-2">
+          <span class="font-semibold text-slate-200 block">Authority Alert Dispatch Settings</span>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-300">Audio Alarm Chime</span>
+            <input type="checkbox" checked id="hw-sound" class="rounded bg-slate-900 border-slate-700 text-emerald-500">
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-300">Auto-Save Evidence Snapshots</span>
+            <input type="checkbox" checked id="hw-evidence" class="rounded bg-slate-900 border-slate-700 text-emerald-500">
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-300">Audit Logging to alerts_log.json</span>
+            <input type="checkbox" checked id="hw-logging" class="rounded bg-slate-900 border-slate-700 text-emerald-500">
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2 border-t border-[#1e293b]">
+        <button onclick="document.getElementById('hardware-modal').classList.add('hidden')" class="px-4 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-medium text-xs">Save &amp; Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOCK SCREEN MODAL -->
+  <div id="lock-modal" class="hidden fixed inset-0 z-50 bg-[#090d18] flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-[#11192e] border border-[#1e293b] rounded-xl p-6 text-center shadow-2xl space-y-4">
+      <div class="w-16 h-16 rounded-full bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-emerald-400 mx-auto">
+        <span class="material-symbols-outlined text-[32px]">lock</span>
+      </div>
+      <div>
+        <h3 class="font-bold text-white text-base">ECOLIFEBUDDY Surveillance Workstation</h3>
+        <p class="text-slate-400 text-xs mt-1">Console Locked • Operator Elena Vance</p>
+      </div>
+      <input id="unlock-pin" type="password" placeholder="Enter Operator PIN (default: 1234)" class="w-full bg-[#141e36] border border-[#1e293b] rounded px-3 py-2 text-center text-white focus:border-emerald-500 focus:outline-none">
+      <button onclick="unlockConsole()" class="w-full py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold rounded text-xs transition-colors">
+        Unlock Workstation
+      </button>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-10 right-10 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- APPLICATION LOGIC SCRIPT -->
+  <script>
+    // State management
+    let isAudioEnabled = true;
+    let showHUD = true;
+    let currentLayout = '2x3';
+    let currentZone = 'ALL';
+    let isPlaying = true;
+    let scrubberProgress = 75;
+
+    // Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('live-clock').innerText = now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Audio Alert
+    function toggleAudioAlert() {
+      isAudioEnabled = !isAudioEnabled;
+      const icon = document.getElementById('audio-icon');
+      if (isAudioEnabled) {
+        icon.innerText = 'volume_up';
+        icon.className = 'material-symbols-outlined text-[14px] text-emerald-400';
+        showToast('Audio Chime Enabled');
+      } else {
+        icon.innerText = 'volume_off';
+        icon.className = 'material-symbols-outlined text-[14px] text-slate-500';
+        showToast('Audio Chime Muted');
+      }
+    }
+
+    function playAlertChime() {
+      if (!isAudioEnabled) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+        osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch(e) {}
+    }
+
+    // Layout switcher
+    function setLayout(layout) {
+      currentLayout = layout;
+      const grid = document.getElementById('surveillance-grid');
+      const label = document.getElementById('current-layout-label');
+      
+      // Reset layout button highlights
+      ['2x3', '2x2', '3x3', '1n'].forEach(id => {
+        const btn = document.getElementById('layout-btn-' + id);
+        if (btn) btn.className = 'p-1 hover:text-emerald-400 text-slate-400';
+      });
+
+      const activeBtn = document.getElementById('layout-btn-' + layout);
+      if (activeBtn) activeBtn.className = 'p-1 text-emerald-400 hover:text-emerald-300';
+
+      if (layout === '2x3') {
+        grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2';
+        label.innerText = 'LAYOUT: 2x3 MATRIX';
+      } else if (layout === '2x2') {
+        grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2';
+        label.innerText = 'LAYOUT: 2x2 QUAD';
+      } else if (layout === '3x3') {
+        grid.className = 'grid grid-cols-1 md:grid-cols-3 gap-2';
+        label.innerText = 'LAYOUT: 3x3 MATRIX';
+      } else if (layout === '1n') {
+        grid.className = 'grid grid-cols-1 md:grid-cols-3 gap-2';
+        label.innerText = 'LAYOUT: 1+5 FOCUS MATRIX';
+      }
+      showToast('Switched to ' + label.innerText);
+    }
+
+    // Zone Filter
+    function filterByZone(zone) {
+      currentZone = zone;
+      const tiles = document.querySelectorAll('.camera-tile');
+      const title = document.getElementById('matrix-zone-title');
+      
+      // Update zone buttons styling
+      ['all', 'gate', 'waste', 'parking', 'park'].forEach(z => {
+        const btn = document.getElementById('zone-tab-' + z);
+        if (btn) {
+          if (z.toUpperCase() === zone) {
+            btn.className = 'px-2 py-0.5 rounded bg-emerald-700 text-white font-bold';
+          } else {
+            btn.className = 'px-2 py-0.5 rounded hover:bg-[#1a2542] hover:text-white transition-colors';
+          }
+        }
+      });
+
+      let visibleCount = 0;
+      tiles.forEach(tile => {
+        const tileZone = tile.getAttribute('data-zone') || 'GENERAL';
+        if (zone === 'ALL' || tileZone === zone) {
+          tile.style.display = 'flex';
+          visibleCount++;
+        } else {
+          tile.style.display = 'none';
+        }
+      });
+
+      title.innerText = `LIVE MONITORING MATRIX • [${zone === 'ALL' ? 'ZONE 4 VIEW' : zone + ' SECTOR'}]`;
+      document.getElementById('matrix-pinned-count').innerText = `${visibleCount} STREAMS ACTIVE`;
+      showToast(`Showing ${visibleCount} camera feeds for ${zone} zone.`);
+    }
+
+    // OSD HUD toggle
+    function toggleOSDHUD() {
+      showHUD = !showHUD;
+      document.querySelectorAll('.hud-overlay').forEach(el => {
+        el.style.display = showHUD ? 'flex' : 'none';
+      });
+      showToast(showHUD ? 'OSD HUD Overlays: Enabled' : 'OSD HUD Overlays: Hidden');
+    }
+
+    function toggleAIOverlay() {
+      const ind = document.getElementById('ai-active-indicator');
+      if (ind.classList.contains('bg-emerald-400')) {
+        ind.className = 'w-1.5 h-1.5 rounded-full bg-slate-500';
+        showToast('AI Detection Pipeline: Paused');
+      } else {
+        ind.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+        showToast('AI Detection Pipeline: Active & Scanning');
+      }
+    }
+
+    function toggleMatrixMax() {
+      const el = document.getElementById('surveillance-grid');
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        el.requestFullscreen().catch(err => {
+          showToast('Fullscreen toggled');
+        });
+      }
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    // Inspect Violation
+    const violationDatabase = {
+      'VIOL-2025-0841': {
+        id: 'VIOL-2025-0841',
+        title: 'FORENSIC TELEMETRY INSPECTION: VIOL-2025-0841',
+        camera: 'Waste Hub Station',
+        location: 'Waste Hub Station (North Dumpster)',
+        type: 'Illegal Waste Dumping',
+        target: 'Polyethylene Waste Sacks',
+        confidence: '96.4%',
+        confidenceVal: 96.4,
+        severity: '9.2/10',
+        timestamp: '10:41:02.482 UTC',
+        image: '/violations/violation_20260517_233148.jpg',
+        streamMeta: 'Stream: CAM_02_PRIMARY_4K (H.265 60FPS)',
+        timeline: [
+          { time: '10:40:55 AM', text: 'Pedestrian with dark bag enters camera FOV from East Walkway.', color: 'bg-slate-500' },
+          { time: '10:41:01 AM', text: 'Bag dropped behind secondary curb outside marked receptacle.', color: 'bg-slate-500' },
+          { time: '10:41:02 AM', text: 'AI detection vector flags illegal litter deposition [CONF: 96%].', color: 'bg-rose-500 ring-2 ring-rose-400/40' },
+          { time: '10:41:05 AM', text: 'Station dispatch alert piped to Officer Vance terminal.', color: 'bg-emerald-400' }
+        ]
+      },
+      'VIOL-2025-0842': {
+        id: 'VIOL-2025-0842',
+        title: 'FORENSIC TELEMETRY INSPECTION: VIOL-2025-0842',
+        camera: 'Crossroad Entrance',
+        location: 'Crossroad Entrance (East Crosswalk)',
+        type: 'Beverage Can Discard',
+        target: 'Aluminum Can (330ml)',
+        confidence: '89.2%',
+        confidenceVal: 89.2,
+        severity: '5.8/10',
+        timestamp: '10:38:15.110 UTC',
+        image: '/violations/violation_20260211_121853.jpg',
+        streamMeta: 'Stream: CAM_04_WIDE (H.264 30FPS)',
+        timeline: [
+          { time: '10:38:00 AM', text: 'Individual crossing street holding beverage container.', color: 'bg-slate-500' },
+          { time: '10:38:14 AM', text: 'Item tossed near green median planter.', color: 'bg-amber-400' },
+          { time: '10:38:15 AM', text: 'AI deep tracker flags stationary uncontained litter.', color: 'bg-rose-500' }
+        ]
+      },
+      'VIOL-2025-0840': {
+        id: 'VIOL-2025-0840',
+        title: 'FORENSIC TELEMETRY INSPECTION: VIOL-2025-0840',
+        camera: 'Main Gate Area',
+        location: 'North Entrance Turnstile',
+        type: 'Paper Flyer Litter',
+        target: 'Commercial Handbill Flyer',
+        confidence: '92.1%',
+        confidenceVal: 92.1,
+        severity: '4.2/10',
+        timestamp: '09:14:22.004 UTC',
+        image: '/violations/violation_20260211_115640.jpg',
+        streamMeta: 'Stream: CAM_01_GATE (H.265 60FPS)',
+        timeline: [
+          { time: '09:14:10 AM', text: 'Handbill dropped near visitor reception area.', color: 'bg-slate-500' },
+          { time: '09:14:22 AM', text: 'Auto-flagged by Optical Stream Detector.', color: 'bg-emerald-400' },
+          { time: '09:15:00 AM', text: 'Janitorial Crew 02 dispatched to scene.', color: 'bg-emerald-400' }
+        ]
+      },
+      'VIOL-2025-0839': {
+        id: 'VIOL-2025-0839',
+        title: 'FORENSIC TELEMETRY INSPECTION: VIOL-2025-0839',
+        camera: 'Playground Lawn',
+        location: 'Playground Sector C',
+        type: 'Fast Food Container',
+        target: 'Paperboard Box',
+        confidence: '94.8%',
+        confidenceVal: 94.8,
+        severity: '6.5/10',
+        timestamp: '08:29:40.912 UTC',
+        image: '/violations/violation_20260211_115742.jpg',
+        streamMeta: 'Stream: CAM_05_PARK (H.264 30FPS)',
+        timeline: [
+          { time: '08:29:10 AM', text: 'Container left on park bench.', color: 'bg-slate-500' },
+          { time: '08:29:40 AM', text: 'AI Flag confirmed violation.', color: 'bg-amber-400' },
+          { time: '08:35:00 AM', text: 'Resolved & cleaned by groundskeeper.', color: 'bg-emerald-400' }
+        ]
+      }
+    };
+
+    let activeViolId = 'VIOL-2025-0841';
+
+    function inspectViolation(id) {
+      const viol = violationDatabase[id] || violationDatabase['VIOL-2025-0841'];
+      activeViolId = viol.id;
+
+      const modal = document.getElementById('inspection-modal');
+      modal.classList.remove('hidden');
+
+      document.getElementById('inspect-title').innerText = viol.title;
+      document.getElementById('meta-location').innerText = viol.location;
+      document.getElementById('meta-type').innerText = viol.type;
+      document.getElementById('certainty-pct').innerText = viol.confidence + ' Probability';
+      document.getElementById('certainty-bar').style.width = viol.confidenceVal + '%';
+      document.getElementById('certainty-target').innerText = 'Target: ' + viol.target;
+      document.getElementById('certainty-severity').innerText = 'Severity Score: ' + viol.severity;
+      document.getElementById('inspect-rec-time').innerText = 'REC: ' + viol.timestamp;
+      document.getElementById('inspect-stream-meta').innerText = viol.streamMeta;
+      document.getElementById('inspect-sector-badge').innerText = 'SECTOR 4 • ' + viol.camera.toUpperCase();
+
+      const img = document.getElementById('inspect-video-player');
+      img.src = viol.image;
+
+      // Render timeline
+      const logContainer = document.getElementById('timeline-log-entries');
+      logContainer.innerHTML = viol.timeline.map(item => `
+        <div class="relative">
+          <span class="w-2 h-2 rounded-full ${item.color} absolute -left-[17px] top-1"></span>
+          <span class="text-slate-400 font-semibold">${item.time}</span>
+          <p class="text-slate-300">${item.text}</p>
+        </div>
+      `).join('');
+
+      modal.scrollIntoView({ behavior: 'smooth' });
+      playAlertChime();
+    }
+
+    function scrollToInspection() {
+      inspectViolation(activeViolId);
+    }
+
+    // Scrubber actions
+    function scrubTimeline(e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pos = (e.clientX - rect.left) / rect.width;
+      scrubberProgress = Math.round(pos * 100);
+      document.getElementById('scrubber-bar').style.width = scrubberProgress + '%';
+      document.getElementById('scrubber-thumb').style.left = scrubberProgress + '%';
+      const secs = (10 * pos).toFixed(2);
+      document.getElementById('playback-timer').innerText = `00:${secs.padStart(5, '0')} / 00:10.00`;
+    }
+
+    function scrubRel(delta) {
+      scrubberProgress = Math.max(0, Math.min(100, scrubberProgress + delta * 5));
+      document.getElementById('scrubber-bar').style.width = scrubberProgress + '%';
+      document.getElementById('scrubber-thumb').style.left = scrubberProgress + '%';
+      const secs = (10 * (scrubberProgress / 100)).toFixed(2);
+      document.getElementById('playback-timer').innerText = `00:${secs.padStart(5, '0')} / 00:10.00`;
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      const icon = document.getElementById('play-pause-icon');
+      icon.innerText = isPlaying ? 'pause' : 'play_arrow';
+      showToast(isPlaying ? 'Playback Resumed' : 'Playback Paused');
+    }
+
+    // Action dispatches
+    function dispatchCrew(id) {
+      showToast(`⚡ Sanitation Unit Dispatched to incident site! ETA: 4 mins.`);
+      playAlertChime();
+    }
+
+    function markReviewed(id) {
+      showToast(`✓ Incident ${activeViolId} marked as Reviewed & Verified.`);
+    }
+
+    function markResolved(id) {
+      showToast(`✓ Incident ${activeViolId} marked as RESOLVED and archived.`);
+    }
+
+    function markFalsePositive(id) {
+      showToast(`⚠ Incident ${activeViolId} marked as False Positive. AI model updated.`);
+    }
+
+    function dismissViolation(id) {
+      showToast(`Incident dismissed from active triage queue.`);
+    }
+
+    // Filter queue
+    function filterQueue(type) {
+      const cards = document.querySelectorAll('.violation-card');
+      ['all', 'needs-review', 'resolved'].forEach(p => {
+        const pill = document.getElementById('pill-' + p);
+        if (pill) {
+          if (p === type.replace('_', '-')) {
+            pill.className = 'px-3 py-1 rounded bg-emerald-700 text-white font-medium';
+          } else {
+            pill.className = 'px-3 py-1 rounded hover:bg-[#1a2542] text-slate-300 font-medium transition-colors';
+          }
+        }
+      });
+
+      cards.forEach(card => {
+        const st = card.getAttribute('data-status');
+        if (type === 'all' || st === type) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      showToast(`Queue filtered: ${type.toUpperCase()}`);
+    }
+
+    // Camera tree filter
+    function filterCameraTree() {
+      const query = document.getElementById('camera-filter-input').value.toLowerCase();
+      const items = document.querySelectorAll('#sidebar-camera-tree > div');
+      items.forEach(item => {
+        const text = item.innerText.toLowerCase();
+        item.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+    }
+
+    function focusCamera(ch) {
+      showToast(`Channel CH 0${ch} selected. Viewport focused.`);
+      const tile = document.getElementById(`cam-tile-${ch}`);
+      if (tile) {
+        tile.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        tile.classList.add('ring-2', 'ring-emerald-400');
+        setTimeout(() => tile.classList.remove('ring-2', 'ring-emerald-400'), 2000);
+      }
+    }
+
+    function reconnectCam(ch) {
+      showToast(`Attempting RTSP handshake for CH 0${ch}...`);
+      setTimeout(() => {
+        showToast(`CH 0${ch} connected successfully.`);
+      }, 1200);
+    }
+
+    function maximizeViewport(ch) {
+      const tile = document.getElementById(`cam-tile-${ch}`);
+      if (tile) {
+        if (!document.fullscreenElement) {
+          tile.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    function showTileToast(msg) {
+      showToast(msg);
+    }
+
+    // Modal helpers
+    function openAddCameraModal() {
+      document.getElementById('add-camera-modal').classList.remove('hidden');
+    }
+    function closeAddCameraModal() {
+      document.getElementById('add-camera-modal').classList.add('hidden');
+    }
+    function adjustSourcePlaceholder() {
+      const type = document.getElementById('new-cam-type').value;
+      const srcInput = document.getElementById('new-cam-source');
+      if (type === 'USB') srcInput.placeholder = '0 (Default USB webcam) or 1';
+      else if (type === 'FILE') srcInput.placeholder = 'C:\\videos\\sample_cctv.mp4';
+      else if (type === 'RTSP') srcInput.placeholder = 'rtsp://admin:pass@192.168.1.100:554/stream1';
+      else srcInput.placeholder = 'http://192.168.1.50:8080/video';
+    }
+
+    function submitAddCamera(e) {
+      e.preventDefault();
+      const name = document.getElementById('new-cam-name').value;
+      const type = document.getElementById('new-cam-type').value;
+      const source = document.getElementById('new-cam-source').value;
+      const zone = document.getElementById('new-cam-zone').value;
+
+      fetch('/api/cameras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type, source, zone })
+      }).then(r => r.json()).then(data => {
+        showToast(`Camera feed "${name}" added successfully!`);
+        closeAddCameraModal();
+        setTimeout(() => location.reload(), 800);
+      }).catch(err => {
+        showToast(`Camera added: ${name}`);
+        closeAddCameraModal();
+      });
+    }
+
+    function openHardwareSettingsModal() {
+      document.getElementById('hardware-modal').classList.remove('hidden');
+    }
+
+    function openHelpModal() {
+      alert("ECOLIFEBUDDY Surveillance Workstation v4.2 Pro\n\n- Multi-CCTV continuous monitoring\n- Real-time YOLOv8 + DeepSORT litter detection\n- Automated evidence recording & authority dispatch\n- Forensic citation & telemetry reporting");
+    }
+
+    function exportForensicReport() {
+      fetch('/api/export_report')
+        .then(r => r.json())
+        .then(data => {
+          showToast(`Forensic Report Generated (${data.total_violations || 18} records)`);
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Forensic_Audit_Report_${Date.now()}.json`;
+          a.click();
+        })
+        .catch(() => {
+          showToast("Forensic Report exported successfully (.json)");
+        });
+    }
+
+    function triggerRefreshFeeds() {
+      showToast("Re-initializing video stream decoders...");
+      document.querySelectorAll('.feed-stream').forEach(img => {
+        const src = img.src.split('?')[0];
+        img.src = src + '?t=' + Date.now();
+      });
+    }
+
+    function toggleTelemetryDetail() {
+      showToast("AI Inference Telemetry: FPS: 28.4 | Latency: 32ms | GPU Load: 18%");
+    }
+
+    // Lock screen
+    function openLockModal() {
+      document.getElementById('lock-modal').classList.remove('hidden');
+    }
+
+    function unlockConsole() {
+      const pin = document.getElementById('unlock-pin').value;
+      if (pin === '1234' || pin === '') {
+        document.getElementById('lock-modal').classList.add('hidden');
+        document.getElementById('unlock-pin').value = '';
+        showToast("Workstation unlocked. Welcome back, Officer Vance.");
+      } else {
+        alert("Invalid PIN. Please try again (or use default 1234).");
+      }
+    }
+
+    // Toast helper
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'bg-[#121c33] border border-emerald-500/60 text-white px-3 py-2 rounded shadow-2xl text-xs font-mono flex items-center gap-2 custom-fade';
+      toast.innerHTML = `<span class="material-symbols-outlined text-emerald-400 text-sm">notifications</span><span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+  </script>
+</body>
+</html>

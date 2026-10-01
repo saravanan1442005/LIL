@@ -1,0 +1,25 @@
+{
+  "cameras": [],
+  "alert_settings": {
+    "sound_enabled": true,
+    "save_evidence": true,
+    "email_enabled": false,
+    "email_to": "",
+    "email_from": "",
+    "smtp_server": "",
+    "smtp_port": 587,
+    "cooldown_seconds": 10
+  },
+  "detection_settings": {
+    "model_path": "yolo26m.pt",
+    "confidence_threshold": 0.25,
+    "frame_width": 640,
+    "frame_height": 480
+  },
+  "ui_settings": {
+    "grid_columns": 2,
+    "show_bounding_boxes": true,
+    "show_labels": true,
+    "show_fps": true
+  }
+}

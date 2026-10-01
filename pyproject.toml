@@ -1,0 +1,8 @@
+[tool.pyright]
+extraPaths = [
+    "C:/Users/sarav/AppData/Roaming/Python/Python314/site-packages",
+    "C:/Users/sarav/AppData/Local/Python/pythoncore-3.14-64/Lib/site-packages",
+    "d:/LIL"
+]
+pythonVersion = "3.14"
+pythonPlatform = "Windows"

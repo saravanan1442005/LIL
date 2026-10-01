@@ -1,0 +1,20 @@
+{
+  "venvPath": "C:\\Users\\sarav\\AppData\\Roaming\\Python",
+  "pythonVersion": "3.14",
+  "pythonPlatform": "Windows",
+  "executionEnvironments": [
+    {
+      "root": "d:\\LIL",
+      "extraPaths": [
+        "C:\\Users\\sarav\\AppData\\Roaming\\Python\\Python314\\site-packages",
+        "C:\\Users\\sarav\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages",
+        "d:\\LIL"
+      ]
+    }
+  ],
+  "extraPaths": [
+    "C:\\Users\\sarav\\AppData\\Roaming\\Python\\Python314\\site-packages",
+    "C:\\Users\\sarav\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages",
+    "d:\\LIL"
+  ]
+}
