@@ -3,7 +3,7 @@
   "cameras": [
     {
       "id": 1,
-      "name": "Balneário Camboriú - Central",
+      "name": "Balneario Camboriu - Central",
       "source": "https://www.youtube.com/watch?v=QMN4_62A3As",
       "type": "YOUTUBE",
       "enabled": true,
@@ -19,7 +19,7 @@
     },
     {
       "id": 3,
-      "name": "Avenida Atlântica (Beach)",
+      "name": "Avenida Atlantica (Beach)",
       "source": "https://www.youtube.com/watch?v=5Xl6pSgiy3A",
       "type": "YOUTUBE",
       "enabled": true,

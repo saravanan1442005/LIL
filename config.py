@@ -35,7 +35,7 @@ def load_config():
     """Load configuration from disk, or create default."""
     if os.path.exists(CONFIG_FILE):
         try:
-            with open(CONFIG_FILE, "r") as f:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 config = json.load(f)
             # Merge with defaults for any missing keys
             for key, value in DEFAULT_CONFIG.items():
@@ -54,8 +54,8 @@ def load_config():
 def save_config(config):
     """Persist configuration to disk."""
     try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(config, f, indent=2)
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
         return True
     except IOError as e:
         print(f"Failed to save config: {e}")
