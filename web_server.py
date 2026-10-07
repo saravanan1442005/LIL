@@ -13,87 +13,6 @@ from config import load_config, save_config, add_camera as config_add_cam
 from camera_manager import CameraManager
 from alert_system import AlertSystem, VIOLATIONS_DIR, ALERT_LOG_FILE
 
-# ── Public Live Camera Sources (freely streaming) ──────────────────────────────
-# These are publicly accessible cameras that stream freely.
-# We proxy them through OpenCV so the browser gets a clean MJPEG feed.
-PUBLIC_CAMERAS = {
-    "jackson_hole": {
-        "name": "Jackson Hole Town Square",
-        "location": "Jackson, Wyoming, USA",
-        "source": "https://video.nest.com/live/g8rQfMbakN",
-        "snapshot": "https://www.seejh.com/cams/town.jpg",
-        "type": "HTTP",
-        "description": "Live view of Jackson Hole town square",
-        "icon": "location_city",
-        "zone": "GATE"
-    },
-    "abbey_road": {
-        "name": "Abbey Road Crossing",
-        "location": "London, UK",
-        "source": "https://www.abbeyroad.com/crossing",
-        "snapshot": "https://www.abbeyroad.com/crossing",
-        "type": "HTTP",
-        "description": "The famous Beatles crosswalk",
-        "icon": "directions_walk",
-        "zone": "GATE"
-    },
-    "times_square": {
-        "name": "Times Square NYC",
-        "location": "New York City, USA",
-        "source": "https://www.earthcam.com/usa/newyork/timessquare/",
-        "snapshot": "https://www.earthcam.com/cams/common/icons/cams/timessquare_702_bway_2.jpg",
-        "type": "HTTP",
-        "description": "Live view of Times Square",
-        "icon": "nightlife",
-        "zone": "GATE"
-    },
-    "shibuya_crossing": {
-        "name": "Shibuya Crossing",
-        "location": "Tokyo, Japan",
-        "source": "https://www.youtube.com/watch?v=DjdUEyjx8GM",
-        "snapshot": "",
-        "type": "YOUTUBE",
-        "description": "World's busiest pedestrian crossing",
-        "icon": "groups",
-        "zone": "GATE"
-    },
-    "venice_rialto": {
-        "name": "Venice Grand Canal",
-        "location": "Venice, Italy",
-        "source": "https://www.youtube.com/watch?v=xHDQ7v8racA",
-        "snapshot": "",
-        "type": "YOUTUBE",
-        "description": "Live view of Venice Grand Canal",
-        "icon": "sailing",
-        "zone": "PARK"
-    },
-    "dublin_temple_bar": {
-        "name": "Dublin Temple Bar",
-        "location": "Dublin, Ireland",
-        "source": "https://www.youtube.com/watch?v=v1uKPMzSiRQ",
-        "snapshot": "",
-        "type": "YOUTUBE",
-        "description": "Live view of Temple Bar district",
-        "icon": "local_bar",
-        "zone": "GATE"
-    },
-    "laptop_camera": {
-        "name": "💻 Your Laptop Camera",
-        "location": "Local Device",
-        "source": "webcam",
-        "snapshot": "",
-        "type": "WEBCAM",
-        "description": "Use your laptop/USB webcam for live testing",
-        "icon": "photo_camera_front",
-        "zone": "GENERAL"
-    }
-}
-
-# Thread-safe storage for active public camera captures
-_public_cam_locks = {}
-_public_cam_captures = {}
-_public_cam_threads = {}
-
 app = Flask(__name__, template_folder="templates")
 
 # Initialize managers
@@ -206,129 +125,10 @@ def generate_mjpeg_stream(cam_id):
         time.sleep(0.04)
 
 
-def _public_cam_capture_loop(cam_key, source_url):
-    """Background thread that continuously captures frames from a public camera."""
-    if cam_key not in _public_cam_locks:
-        _public_cam_locks[cam_key] = threading.Lock()
-
-    cap = cv2.VideoCapture(source_url)
-    if not cap.isOpened():
-        # Try numeric source for USB webcam
-        try:
-            cap = cv2.VideoCapture(int(source_url))
-        except (ValueError, TypeError):
-            pass
-
-    while True:
-        if cap and cap.isOpened():
-            ret, frame = cap.read()
-            if ret and frame is not None:
-                with _public_cam_locks[cam_key]:
-                    _public_cam_captures[cam_key] = frame
-            else:
-                # Try reconnecting
-                cap.release()
-                time.sleep(3)
-                cap = cv2.VideoCapture(source_url)
-        else:
-            time.sleep(5)
-            cap = cv2.VideoCapture(source_url)
-        time.sleep(0.04)  # ~25 FPS
-
-
-def _get_public_cam_frame(cam_key):
-    """Get latest frame from a public camera (thread-safe)."""
-    if cam_key in _public_cam_locks:
-        with _public_cam_locks[cam_key]:
-            frame = _public_cam_captures.get(cam_key)
-            if frame is not None:
-                return frame.copy()
-    return None
-
-
-def generate_public_mjpeg_stream(cam_key):
-    """Generate MJPEG stream from a public camera source."""
-    cam_info = PUBLIC_CAMERAS.get(cam_key)
-    if not cam_info:
-        return
-
-    source = cam_info["source"]
-    cam_type = cam_info["type"]
-
-    # Start capture thread if not already running
-    if cam_key not in _public_cam_threads and cam_type not in ("YOUTUBE", "WEBCAM"):
-        _public_cam_locks[cam_key] = threading.Lock()
-        t = threading.Thread(target=_public_cam_capture_loop, args=(cam_key, source), daemon=True)
-        t.start()
-        _public_cam_threads[cam_key] = t
-
-    while True:
-        frame = _get_public_cam_frame(cam_key)
-        if frame is None:
-            # Generate a "connecting" placeholder frame
-            frame = np.zeros((360, 640, 3), dtype=np.uint8)
-            frame[:] = (25, 30, 40)
-            timestamp_str = datetime.datetime.now().strftime("%H:%M:%S")
-            cv2.putText(frame, f"CONNECTING TO {cam_info['name'].upper()}...", (60, 160),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (100, 200, 150), 2)
-            cv2.putText(frame, f"Source: {cam_info['location']}", (120, 200),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (140, 160, 180), 1)
-            cv2.putText(frame, timestamp_str, (520, 340),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (100, 120, 140), 1)
-
-        ret, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
-        if not ret:
-            continue
-        frame_bytes = jpeg.tobytes()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-        time.sleep(0.04)
-
-
-def generate_usb_webcam_stream(device_index=0):
-    """Generate MJPEG stream from local USB webcam."""
-    cap = cv2.VideoCapture(device_index)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
-    while True:
-        if cap and cap.isOpened():
-            ret, frame = cap.read()
-            if ret and frame is not None:
-                # Add HUD overlay
-                timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                cv2.putText(frame, f"LAPTOP CAM | {timestamp_str}", (10, 25),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 180), 1)
-                cv2.putText(frame, "LIVE LOCAL FEED", (frame.shape[1] - 180, 25),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 200, 255), 1)
-
-                ret, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-                if ret:
-                    frame_bytes = jpeg.tobytes()
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            else:
-                time.sleep(0.5)
-        else:
-            # Generate offline placeholder
-            frame = np.zeros((480, 640, 3), dtype=np.uint8)
-            frame[:] = (30, 25, 25)
-            cv2.putText(frame, "WEBCAM NOT AVAILABLE", (140, 220),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (80, 80, 200), 2)
-            cv2.putText(frame, "Check device connection", (180, 260),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (120, 120, 140), 1)
-            ret, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
-            if ret:
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
-            time.sleep(1)
-        time.sleep(0.04)
-
-
 @app.route('/')
 def index():
     """Render main ECOLIFEBUDDY Surveillance Workstation interface."""
-    return render_template('index.html', public_cameras=PUBLIC_CAMERAS)
+    return render_template('index.html')
 
 
 @app.route('/video_feed/<int:cam_id>')
@@ -338,53 +138,10 @@ def video_feed(cam_id):
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
-@app.route('/public_feed/<cam_key>')
-def public_feed(cam_key):
-    """MJPEG feed from a public camera source (proxied via OpenCV)."""
-    cam_info = PUBLIC_CAMERAS.get(cam_key)
-    if not cam_info:
-        return "Camera not found", 404
-    return Response(generate_public_mjpeg_stream(cam_key),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
-@app.route('/webcam_feed')
-def webcam_feed():
-    """MJPEG feed from the local laptop/USB webcam (server-side OpenCV)."""
-    device = request.args.get('device', '0')
-    try:
-        device_idx = int(device)
-    except ValueError:
-        device_idx = 0
-    return Response(generate_usb_webcam_stream(device_idx),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
 @app.route('/violations/<path:filename>')
 def serve_violation_image(filename):
     """Serve recorded violation snapshots."""
     return send_from_directory(VIOLATIONS_DIR, filename)
-
-
-@app.route('/api/public_cameras')
-def get_public_cameras():
-    """Return list of available public cameras."""
-    cameras = []
-    for key, cam in PUBLIC_CAMERAS.items():
-        cameras.append({
-            "key": key,
-            "name": cam["name"],
-            "location": cam["location"],
-            "type": cam["type"],
-            "description": cam["description"],
-            "icon": cam["icon"],
-            "zone": cam["zone"],
-            "feed_url": f"/public_feed/{key}" if cam["type"] not in ("YOUTUBE", "WEBCAM") else "",
-            "youtube_url": cam["source"] if cam["type"] == "YOUTUBE" else "",
-            "is_webcam": cam["type"] == "WEBCAM",
-            "snapshot": cam.get("snapshot", "")
-        })
-    return jsonify({"cameras": cameras})
 
 
 @app.route('/api/telemetry')
