@@ -3,6 +3,7 @@ import cv2
 import threading
 import time
 import queue
+from stream_resolver import resolve_stream_source, is_youtube_url, resolve_youtube_stream
 
 
 class CameraStream:
@@ -49,6 +50,11 @@ class CameraStream:
                 return 0
         elif self.cam_type == "FILE":
             return str(self.source)
+        elif self.cam_type == "YOUTUBE" or is_youtube_url(str(self.source)):
+            resolved, meta = resolve_stream_source(self.source)
+            if meta and meta.get("title") and self.name in ("Live Camera", "Camera 1", "kk"):
+                self.name = meta.get("title")
+            return resolved
         else:
             # RTSP or HTTP URL
             return str(self.source)

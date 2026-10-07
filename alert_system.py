@@ -23,7 +23,7 @@ class AlertSystem:
         self.sound_enabled = self.config.get("sound_enabled", True)
         self.save_evidence_enabled = self.config.get("save_evidence", True)
         self.email_enabled = self.config.get("email_enabled", False)
-        self.cooldown_seconds = self.config.get("cooldown_seconds", 10)
+        self.cooldown_seconds = min(self.config.get("cooldown_seconds", 3), 3)
 
         # Track cooldowns per camera
         self._last_alert_time = {}  # {cam_id: timestamp}
@@ -116,28 +116,27 @@ class AlertSystem:
         return alert_record
 
     def _save_evidence(self, frame, cam_id, camera_name, timestamp_str, readable_time):
-        """Save annotated screenshot as evidence."""
-        # Create camera-specific subfolder
-        cam_folder = os.path.join(VIOLATIONS_DIR, f"cam_{cam_id}")
-        os.makedirs(cam_folder, exist_ok=True)
-
-        filename = f"violation_{timestamp_str}_cam{cam_id}.jpg"
-        filepath = os.path.join(cam_folder, filename)
+        """Save annotated screenshot directly into violations directory."""
+        os.makedirs(VIOLATIONS_DIR, exist_ok=True)
+        filename = f"violation_{timestamp_str}.jpg"
+        filepath = os.path.join(VIOLATIONS_DIR, filename)
 
         # Annotate the frame
         annotated = frame.copy()
-        # Red banner at top
-        cv2.rectangle(annotated, (0, 0), (annotated.shape[1], 70), (0, 0, 180), -1)
-        cv2.putText(annotated, "LITTERING VIOLATION DETECTED",
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-        cv2.putText(annotated, f"Camera: {camera_name} | {readable_time}",
-                    (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
-        # Timestamp at bottom
+        h, w = annotated.shape[:2]
+        # Red evidence banner at top
+        cv2.rectangle(annotated, (0, 0), (w, 64), (180, 20, 20), -1)
+        cv2.putText(annotated, "LITTERING EVIDENCE CAPTURED",
+                    (15, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(annotated, f"Camera: {camera_name}  |  {readable_time}",
+                    (15, 52), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (220, 230, 245), 1, cv2.LINE_AA)
+        # Timestamp at bottom right
         cv2.putText(annotated, readable_time,
-                    (10, annotated.shape[0] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                    (w - 220, h - 12),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1, cv2.LINE_AA)
 
         cv2.imwrite(filepath, annotated, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        print(f"📸 AUTO-SNAPPED EVIDENCE: {filepath}")
         return filepath
 
     def _play_alert_sound(self):

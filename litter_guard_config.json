@@ -1,5 +1,39 @@
 {
-  "cameras": [],
+  "system_name": "ECOLIFEBUDDY",
+  "cameras": [
+    {
+      "id": 1,
+      "name": "Balneário Camboriú - Central",
+      "source": "https://www.youtube.com/watch?v=QMN4_62A3As",
+      "type": "YOUTUBE",
+      "enabled": true,
+      "zone": "Boardwalk / Public Promenade"
+    },
+    {
+      "id": 2,
+      "name": "Abbey Road Crossing (London)",
+      "source": "https://www.youtube.com/watch?v=zMCea32gpmg",
+      "type": "YOUTUBE",
+      "enabled": true,
+      "zone": "London Crosswalk & Street"
+    },
+    {
+      "id": 3,
+      "name": "Avenida Atlântica (Beach)",
+      "source": "https://www.youtube.com/watch?v=5Xl6pSgiy3A",
+      "type": "YOUTUBE",
+      "enabled": true,
+      "zone": "Coastal Boulevard"
+    },
+    {
+      "id": 4,
+      "name": "Laptop Webcam",
+      "source": "0",
+      "type": "USB",
+      "enabled": true,
+      "zone": "Local Station"
+    }
+  ],
   "alert_settings": {
     "sound_enabled": true,
     "save_evidence": true,
@@ -11,7 +45,7 @@
     "cooldown_seconds": 10
   },
   "detection_settings": {
-    "model_path": "yolo26m.pt",
+    "model_path": "yolo26n.pt",
     "confidence_threshold": 0.25,
     "frame_width": 640,
     "frame_height": 480

@@ -9,7 +9,11 @@ echo ================================================================
 echo Starting Surveillance Engine and Desktop Workstation...
 echo.
 
-start "" "C:\Users\sarav\AppData\Local\Python\pythoncore-3.14-64\python.exe" web_server.py
+if exist "%~dp0.venv\Scripts\python.exe" (
+    start "" "%~dp0.venv\Scripts\python.exe" web_server.py
+) else (
+    start "" py -3.14 web_server.py
+)
 timeout /t 2 /nobreak >nul
 start "" msedge.exe --app=http://127.0.0.1:5000 --window-size=1440,900
 

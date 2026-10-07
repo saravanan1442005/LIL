@@ -1,19 +1,47 @@
 import cv2
 import time
+import argparse
 from detector import EcoDetector
 from tracker import EcoTracker
 from rule_engine import EcoRuleEngine
 from alert import save_violation
+from config import load_config
+from stream_resolver import resolve_stream_source, is_youtube_url
 
 def main():
+    parser = argparse.ArgumentParser(description="EcoGuard AI Behavior Detection")
+    parser.add_argument("--source", default=None, help="Video source (0 for webcam, file, RTSP, or YouTube URL)")
+    parser.add_argument("--model", default="yolo26n.pt", help="YOLO model path (default: yolo26n.pt)")
+    args = parser.parse_args()
+
+    cfg = load_config()
+    source = args.source
+    source_name = "Camera Stream"
+    if source is None:
+        cams = cfg.get("cameras", [])
+        if cams:
+            source = cams[0].get("source", 0)
+            source_name = cams[0].get("name", "Live Camera")
+        else:
+            source = 0
+
+    print(f"📡 Resolving video stream: {source}...")
+    actual_source, meta = resolve_stream_source(source)
+    if meta and meta.get("title"):
+        source_name = meta["title"]
+    print(f"🎬 Connected to: {source_name}")
+
     # 1. Initialize our modules
-    detector = EcoDetector(model_path="yolo26m.pt")
+    detector = EcoDetector(model_path=args.model)
     tracker = EcoTracker()
     engine = EcoRuleEngine()
 
-    # 2. Setup Webcam (0 is default laptop cam)
-    cap = cv2.VideoCapture(0)
-    
+    # 2. Setup Video Capture
+    cap = cv2.VideoCapture(actual_source)
+    if not cap.isOpened():
+        print(f"❌ Failed to open video source: {source}")
+        return
+
     # Standard resolution for balanced performance
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
@@ -22,7 +50,7 @@ def main():
     last_violation_save = 0
     violation_cooldown = 3  # seconds between saves
 
-    print("🔥 Eco Life Buddy System Active. Press 'q' to quit.")
+    print(f"🔥 Eco Life Buddy System Active on '{source_name}'. Press 'q' to quit.")
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -59,12 +87,14 @@ def main():
                 for (p_id, obj_id), state in current_states.items():
                     if obj_id == track_id:
                         status_label = f"STATE: {state}"
-                        if state == "HELD":
-                            color = (0, 255, 255)  # Yellow
+                        if state == "STATIC":
+                            color = (160, 160, 160)  # Calm gray for background items
+                        elif state == "HELD":
+                            color = (0, 255, 255)    # Yellow
                         elif state == "SEPARATING":
-                            color = (0, 165, 255)  # Orange
+                            color = (0, 165, 255)    # Orange
                         elif state == "TRACKING":
-                            color = (0, 100, 255)  # Deep orange
+                            color = (0, 100, 255)    # Deep orange
                         break
 
                 # If this object is an active violation, override to RED
