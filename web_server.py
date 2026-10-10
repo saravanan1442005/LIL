@@ -281,9 +281,10 @@ def camera_worker_loop():
         else:
             # Connecting or transition placeholder canvas
             canvas = np.full((720, 1280, 3), (16, 23, 38), dtype=np.uint8)
-            msg = f"ECOLIFEBUDDY AI — {state.status_message}"
+            msg = f"ECOLIFEBUDDY AI - {state.status_message}".encode('ascii', 'replace').decode('ascii')
             cv2.putText(canvas, msg, (280, 340), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (16, 185, 129), 2)
-            cv2.putText(canvas, str(state.camera_title), (280, 385), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (148, 163, 184), 1)
+            cam_txt = str(state.camera_title).encode('ascii', 'replace').decode('ascii')
+            cv2.putText(canvas, cam_txt, (280, 385), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (148, 163, 184), 1)
             with state.lock:
                 state.latest_display_frame = canvas
             time.sleep(0.1)
