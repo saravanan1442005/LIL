@@ -1,0 +1,106 @@
+<section class="flex flex-col gap-6" id="overview-section">
+  <!-- Hero Banner -->
+  <div class="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-brand-700 via-brand-600 to-teal-500 p-7 shadow-elevated text-white">
+    <div class="flex items-center gap-2">
+      <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/20 text-white backdrop-blur-xs">Live System Active</span>
+      <span class="text-xs text-brand-100 font-medium">All 8 System Phases Fully Operational</span>
+    </div>
+    <h2 class="font-display font-extrabold text-2xl lg:text-3xl mt-3 max-w-3xl leading-tight">{{ slogan }}</h2>
+    <p class="mt-2 text-sm text-brand-50/90 max-w-3xl leading-relaxed">
+      Continuous AI surveillance pipeline detecting people and carried items, recognizing returning visitors via 512-d Re-ID feature embeddings, enforcing virtual tripwires, and reconstructing forensic timelines in seconds.
+    </p>
+  </div>
+
+  <!-- Real-Time Metric Counters (fetched from /api/v2/analytics/overview) -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="overview-kpis">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+      <div class="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider">
+        <span>Registered Visitors</span>
+        <span class="text-brand-600">👥</span>
+      </div>
+      <div class="font-display font-extrabold text-2xl lg:text-3xl mt-2 text-slate-900 dark:text-white" id="kpi-visitors">—</div>
+      <p class="text-[11px] text-slate-400 mt-1">Cross-camera Re-ID matched</p>
+    </div>
+
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+      <div class="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider">
+        <span>Activity Events</span>
+        <span class="text-brand-600">📍</span>
+      </div>
+      <div class="font-display font-extrabold text-2xl lg:text-3xl mt-2 text-slate-900 dark:text-white" id="kpi-events">—</div>
+      <p class="text-[11px] text-slate-400 mt-1">Entry, exit &amp; zone dwell</p>
+    </div>
+
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+      <div class="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider">
+        <span>Active Cameras</span>
+        <span class="text-brand-600">📹</span>
+      </div>
+      <div class="font-display font-extrabold text-2xl lg:text-3xl mt-2 text-slate-900 dark:text-white" id="kpi-cameras">—</div>
+      <p class="text-[11px] text-slate-400 mt-1">RTSP, USB &amp; Video Streams</p>
+    </div>
+
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+      <div class="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase tracking-wider">
+        <span>Active Anomalies</span>
+        <span class="text-amber-500">⚠️</span>
+      </div>
+      <div class="font-display font-extrabold text-2xl lg:text-3xl mt-2 text-amber-600 dark:text-amber-400" id="kpi-alerts">—</div>
+      <p class="text-[11px] text-slate-400 mt-1">Loitering &amp; restricted entry</p>
+    </div>
+  </div>
+
+  <!-- Quick Action Nav Cards -->
+  <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    <a href="#live_monitoring" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between group">
+      <div>
+        <div class="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 flex items-center justify-center font-bold text-lg mb-3">🎥</div>
+        <h4 class="font-display font-bold text-base text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">Live Monitoring</h4>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">Multi-camera viewports with YOLO bounding boxes, ByteTrack IDs, and visitor tags.</p>
+      </div>
+      <span class="text-xs font-bold text-brand-600 mt-4 flex items-center gap-1">Open Feeds &rarr;</span>
+    </a>
+
+    <a href="#visitors" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between group">
+      <div>
+        <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center font-bold text-lg mb-3">👤</div>
+        <h4 class="font-display font-bold text-base text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">Visitor Directory</h4>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">View recurring profiles, categorize delivery/technicians, or merge duplicates.</p>
+      </div>
+      <span class="text-xs font-bold text-blue-600 mt-4 flex items-center gap-1">View Directory &rarr;</span>
+    </a>
+
+    <a href="#search_timeline" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between group">
+      <div>
+        <div class="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 flex items-center justify-center font-bold text-lg mb-3">🔍</div>
+        <h4 class="font-display font-bold text-base text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors">Forensic Search</h4>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">Natural-language and filtered queries with one-click forensic timeline export.</p>
+      </div>
+      <span class="text-xs font-bold text-purple-600 mt-4 flex items-center gap-1">Search Events &rarr;</span>
+    </a>
+
+    <a href="#alerts" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between group">
+      <div>
+        <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center font-bold text-lg mb-3">⚡</div>
+        <h4 class="font-display font-bold text-base text-slate-900 dark:text-white group-hover:text-amber-600 transition-colors">Alert Dispatch</h4>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">Review, acknowledge, and resolve real-time loitering and restricted entry flags.</p>
+      </div>
+      <span class="text-xs font-bold text-amber-600 mt-4 flex items-center gap-1">Review Alerts &rarr;</span>
+    </a>
+  </div>
+</section>
+
+<script>
+  (function() {
+    fetch('/api/v2/analytics/overview')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var kpis = data.kpis || {};
+        document.getElementById('kpi-visitors').innerText = kpis.total_registered_visitors || 0;
+        document.getElementById('kpi-events').innerText = kpis.events_today || 0;
+        document.getElementById('kpi-cameras').innerText = kpis.active_cameras || 0;
+        document.getElementById('kpi-alerts').innerText = kpis.unresolved_alerts || 0;
+      })
+      .catch(function() {});
+  })();
+</script>

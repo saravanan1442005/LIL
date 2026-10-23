@@ -1,0 +1,160 @@
+<section class="flex flex-col gap-6" id="search-timeline-section">
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="font-display font-extrabold text-2xl text-slate-900 dark:text-white">Forensic Search &amp; Incident Timeline</h2>
+        <span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800 rounded-full">NLP &amp; Forensic Engine</span>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+        Reconstruct verified chronological presence timelines across multiple cameras. Search via natural language or structured filters, and export compliance-ready forensic reports.
+      </p>
+    </div>
+
+    <!-- Export Buttons -->
+    <div class="flex items-center gap-2">
+      <button onclick="exportTimeline('html')" class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer">
+        <span>Export PDF / Report</span>
+      </button>
+      <button onclick="exportTimeline('json')" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs hover:bg-slate-200 cursor-pointer">
+        JSON
+      </button>
+    </div>
+  </div>
+
+  <!-- Natural Language Query Bar -->
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card space-y-3">
+    <div class="flex items-center gap-2">
+      <div class="relative flex-1">
+        <input id="nl-search-input" type="text" placeholder="e.g. delivery person with a box near Gate 1 yesterday evening" onkeyup="if(event.key==='Enter') executeForensicSearch()" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+      </div>
+      <button onclick="executeForensicSearch()" class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs cursor-pointer">
+        Search Events
+      </button>
+    </div>
+
+    <!-- Suggestion Chips -->
+    <div class="flex items-center gap-2 flex-wrap text-[11px] text-slate-500">
+      <span class="font-semibold text-slate-400">Suggestions:</span>
+      <button onclick="applySampleQuery('delivery person with a box near Gate 1')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer">"delivery with a box near Gate 1"</button>
+      <button onclick="applySampleQuery('technician entered restricted zone yesterday')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer">"technician restricted zone"</button>
+      <button onclick="applySampleQuery('odd hour visit night')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer">"odd hour visit night"</button>
+    </div>
+  </div>
+
+  <!-- Timeline Reconstruction Display -->
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-card space-y-6">
+    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+      <div>
+        <h3 class="font-display font-bold text-base text-slate-900 dark:text-white">Incident Timeline Sequence</h3>
+        <p class="text-xs text-slate-400 mt-0.5" id="timeline-stats-summary">Chronologically correlated event sequence</p>
+      </div>
+      <button onclick="generateTimelineData()" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 cursor-pointer">
+        Recompile Timeline
+      </button>
+    </div>
+
+    <!-- Timeline Vertical Cards -->
+    <div class="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800" id="timeline-cards-list">
+      <div class="text-center py-8 text-sm text-slate-400">Loading incident timeline...</div>
+    </div>
+  </div>
+</section>
+
+<script>
+  window.applySampleQuery = function(q) {
+    var input = document.getElementById('nl-search-input');
+    if (input) {
+      input.value = q;
+      executeForensicSearch();
+    }
+  };
+
+  window.executeForensicSearch = function() {
+    var q = document.getElementById('nl-search-input').value.trim();
+    var listContainer = document.getElementById('timeline-cards-list');
+    listContainer.innerHTML = '<div class="text-center py-6 text-sm text-slate-400">Executing forensic search query...</div>';
+
+    fetch('/api/v2/search?q=' + encodeURIComponent(q))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var events = data.events || [];
+        var summaryEl = document.getElementById('timeline-stats-summary');
+        if (summaryEl) {
+          summaryEl.innerText = 'Matched ' + data.total + ' events matching query filters: ' + JSON.stringify(data.parsed_query || {});
+        }
+        renderTimelineCards(events);
+      });
+  };
+
+  window.generateTimelineData = function() {
+    var listContainer = document.getElementById('timeline-cards-list');
+    listContainer.innerHTML = '<div class="text-center py-6 text-sm text-slate-400">Compiling 24-hour forensic timeline...</div>';
+
+    fetch('/api/v2/timeline/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var summaryEl = document.getElementById('timeline-stats-summary');
+      if (summaryEl && data.summary) {
+        summaryEl.innerText = data.summary.total_events + ' total events across ' + data.summary.distinct_cameras + ' cameras (' + data.summary.alerts_linked + ' anomalies flagged)';
+      }
+      renderTimelineCards(data.timeline || []);
+    });
+  };
+
+  function renderTimelineCards(events) {
+    var container = document.getElementById('timeline-cards-list');
+    if (!container) return;
+
+    if (events.length === 0) {
+      container.innerHTML = '<div class="text-center py-8 text-slate-400 italic text-sm">No correlated events found in this window.</div>';
+      return;
+    }
+
+    var html = '';
+    events.forEach(function(ev) {
+      var dotColor = 'bg-brand-500';
+      var badgeCls = 'bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300';
+      if (ev.event_type === 'RESTRICTED_ZONE') {
+        dotColor = 'bg-red-500';
+        badgeCls = 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300';
+      } else if (ev.event_type === 'LOITERING') {
+        dotColor = 'bg-amber-500';
+        badgeCls = 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300';
+      }
+
+      var ts = ev.timestamp ? ev.timestamp.replace('T', ' ').substring(0, 19) : '—';
+      var objsStr = (ev.detected_objects && ev.detected_objects.length > 0) ? ev.detected_objects.join(', ') : 'None';
+
+      html += '<div class="relative flex items-start gap-4">' +
+        '<div class="absolute -left-6 top-1.5 w-3 h-3 rounded-full ' + dotColor + ' ring-4 ring-white dark:ring-slate-900"></div>' +
+        '<div class="flex-1 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 rounded-xl p-4 shadow-xs">' +
+          '<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ' + badgeCls + '">' + ev.event_type + '</span>' +
+              '<span class="font-bold text-sm text-slate-900 dark:text-white">' + escapeHtml(ev.visitor_code || 'Visitor #' + (ev.visitor_id || 'Unknown')) + '</span>' +
+              '<span class="text-xs text-slate-400">(' + escapeHtml(ev.visitor_category || 'Unclassified') + ')</span>' +
+            '</div>' +
+            '<span class="font-mono text-xs text-slate-500">' + ts + ' UTC</span>' +
+          '</div>' +
+          '<div class="grid sm:grid-cols-2 gap-2 mt-2.5 text-xs text-slate-600 dark:text-slate-300">' +
+            '<div><span class="font-semibold text-slate-400">Location:</span> ' + escapeHtml(ev.camera_name || ('Camera #' + ev.camera_id)) + '</div>' +
+            '<div><span class="font-semibold text-slate-400">Carried Accessories:</span> ' + escapeHtml(objsStr) + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    });
+
+    container.innerHTML = html;
+  }
+
+  window.exportTimeline = function(fmt) {
+    window.open('/api/v2/timeline/export?format=' + fmt, '_blank');
+  };
+
+  generateTimelineData();
+</script>

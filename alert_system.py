@@ -177,7 +177,7 @@ Time: {alert_record['timestamp']}
 Type: {alert_record['violation_type']}
 Number of Violations: {alert_record['num_violations']}
 
-This is an automated alert from the LitterGuard CCTV Monitoring System.
+This is an automated alert from the EcoLifyBuddy CCTV Monitoring System.
 Please take appropriate action.
 """
             msg.attach(MIMEText(body, "plain"))

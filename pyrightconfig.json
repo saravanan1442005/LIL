@@ -1,19 +1,13 @@
 {
   "venvPath": "c:\\LIL",
-  "venv": ".venv",
-  "pythonVersion": "3.14",
+  "venv": ".venv312",
+  "pythonVersion": "3.12",
   "pythonPlatform": "Windows",
   "executionEnvironments": [
     {
       "root": "c:\\LIL",
-      "extraPaths": [
-        "C:\\Users\\vicky\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages",
-        "c:\\LIL"
-      ]
+      "extraPaths": ["c:\\LIL"]
     }
   ],
-  "extraPaths": [
-    "C:\\Users\\vicky\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages",
-    "c:\\LIL"
-  ]
+  "extraPaths": ["c:\\LIL"]
 }

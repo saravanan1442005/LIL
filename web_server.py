@@ -19,6 +19,12 @@ from stream_resolver import resolve_stream_source, is_youtube_url, resolve_youtu
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
+# New module (Intelligent Visitor Identification & Activity Tracking) blueprints & DB.
+from api import register_blueprints
+from database import init_db
+register_blueprints(app)
+init_db()
+
 # Initialize persistent config & alert system
 config = load_config()
 alert_system = AlertSystem(config)
@@ -105,11 +111,12 @@ class LiveMonitorState:
         self.alert_text = "Clean"
         
         # AI Modules
-        print("🧠 Initializing YOLO Detection Engine...")
-        self.detector = EcoDetector(model_path="yolo26n.pt")
+        model_name = os.getenv("DETECTION_MODEL", "yolo26n.pt")
+        print(f"🧠 Initializing YOLO Detection Engine (Model: {model_name})...")
+        self.detector = EcoDetector(model_path=model_name)
         self.tracker = EcoTracker()
         self.engine = EcoRuleEngine()
-        print("✅ Detection Engine Ready.")
+        print(f"✅ Detection Engine Ready with {model_name}.")
 
         self.demo_frames = []
         self._load_demo_frames()

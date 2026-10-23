@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ECOLIFEBUDDY — AI Smart Surveillance & Waste Detection Platform</title>
-  <meta name="description" content="Enterprise AI-powered CCTV surveillance platform for public cleanliness monitoring, real-time litter detection, and municipal compliance.">
+  <title>EcoLifyBuddy — AI CCTV Intelligence System for Visitor Identification &amp; Activity Tracking</title>
+  <meta name="description" content="An AI-Based CCTV Intelligence System for Visitor Identification, Activity Tracking, and Safer, Cleaner Communities.">
 
   <!-- Modern Fonts: Plus Jakarta Sans & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -127,14 +127,14 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="font-display font-extrabold text-xl tracking-tight text-slate-900 dark:text-white">
-              ECOLIFE<span class="text-brand-600 dark:text-brand-400">BUDDY</span>
+              ECOLIFY<span class="text-brand-600 dark:text-brand-400">BUDDY</span>
             </span>
             <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 border border-brand-200 dark:border-brand-700/50 rounded-full">
-              Enterprise v4.2
+              v5.0
             </span>
           </div>
-          <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            AI Smart Surveillance & Public Cleanliness Monitoring Platform
+          <p class="hidden lg:block text-xs text-slate-500 dark:text-slate-400 font-medium max-w-xl leading-snug">
+            An AI-Based CCTV Intelligence System for Visitor Identification, Activity Tracking, and Safer, Cleaner Communities
           </p>
         </div>
       </div>
@@ -150,7 +150,7 @@
         </div>
 
         <!-- System Status Pill -->
-        <div id="status-pill" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 transition-all">
+        <div id="status-pill" data-legacy-only style="display:none" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 transition-all">
           <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-brand-500 beacon-active"></span>
           <span id="status-text" class="text-xs font-bold uppercase tracking-wider">AI Active • Zone Clean</span>
         </div>
@@ -160,7 +160,7 @@
       <div class="flex items-center gap-2">
 
         <!-- 1-Click AI Monitoring Toggle -->
-        <button id="btn-toggle-ai" onclick="toggleAI()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-400 text-slate-700 dark:text-slate-200 hover:text-brand-700 shadow-xs transition-all text-xs font-semibold cursor-pointer" title="Toggle AI Object Detection & Tracking">
+        <button id="btn-toggle-ai" data-legacy-only style="display:none" onclick="toggleAI()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-400 text-slate-700 dark:text-slate-200 hover:text-brand-700 shadow-xs transition-all text-xs font-semibold cursor-pointer" title="Toggle AI Object Detection & Tracking">
           <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
           </svg>
@@ -168,7 +168,7 @@
         </button>
 
         <!-- Auto-Snap Indicator & Toggle -->
-        <button id="btn-toggle-autosnap" onclick="toggleAutoSnap()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-400 text-slate-700 dark:text-slate-200 hover:text-brand-700 shadow-xs transition-all text-xs font-semibold cursor-pointer" title="Automatically save evidence images when littering occurs">
+        <button id="btn-toggle-autosnap" data-legacy-only style="display:none" onclick="toggleAutoSnap()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-400 text-slate-700 dark:text-slate-200 hover:text-brand-700 shadow-xs transition-all text-xs font-semibold cursor-pointer" title="Automatically save evidence images when littering occurs">
           <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -177,13 +177,13 @@
         </button>
 
         <!-- Test Auto-Snap Button -->
-        <button onclick="triggerTestAlert()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 transition-all text-xs font-semibold cursor-pointer shadow-xs" title="Simulate a violation to test auto-capture immediately">
+        <button data-legacy-only style="display:none" onclick="triggerTestAlert()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 transition-all text-xs font-semibold cursor-pointer shadow-xs" title="Simulate a violation to test auto-capture immediately">
           <span>⚡</span>
           <span class="hidden sm:inline">Test Alert</span>
         </button>
 
         <!-- Sound Alert Toggle -->
-        <button id="btn-toggle-sound" onclick="toggleSound()" class="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-brand-600 hover:border-slate-300 shadow-xs transition-all cursor-pointer" title="Toggle audio chime">
+        <button id="btn-toggle-sound" data-legacy-only style="display:none" onclick="toggleSound()" class="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-brand-600 hover:border-slate-300 shadow-xs transition-all cursor-pointer" title="Toggle audio chime">
           <svg id="icon-sound" class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
           </svg>
@@ -212,8 +212,35 @@
   </header>
 
   <!-- ========================================================================= -->
-  <!-- 2. MAIN WORKSPACE (WHITE / LIGHT THEME) -->
+  <!-- 1b. PRIMARY NAVIGATION (new module) + Legacy tab -->
   <!-- ========================================================================= -->
+  <nav aria-label="Primary" class="sticky top-[61px] z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 lg:px-8">
+    <div class="max-w-[1720px] mx-auto flex items-center gap-1 overflow-x-auto no-scrollbar py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+      <button data-view="visitor_overview" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">Overview</button>
+      <button data-view="live_monitoring" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">Live Monitoring</button>
+      <button data-view="visitors" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">Visitors</button>
+      <button data-view="events" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">Events Log</button>
+      <button data-view="alerts" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">Alerts</button>
+      <button data-view="search_timeline" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">Search &amp; Timeline</button>
+      <button data-view="cameras_zones" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">Cameras &amp; Zones</button>
+      <button data-view="analytics" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">Analytics</button>
+      <button data-view="settings" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">Settings</button>
+      <button data-view="audit" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">Audit Log</button>
+      <span class="shrink-0 mx-2 h-5 w-px bg-slate-200 dark:bg-slate-700" aria-hidden="true"></span>
+      <button data-view="legacy" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer text-slate-500 dark:text-slate-400" title="Original litter / waste-disposal violation detection">Legacy / Cleanliness Monitoring</button>
+      <span class="flex-1"></span>
+      <a href="/about" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">About</a>
+      <a href="/login" class="shrink-0 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Sign in</a>
+    </div>
+  </nav>
+
+  <!-- New-module pages are injected here from /partials/<name> by static/js/nav.js -->
+  <div id="view-app" class="flex-1 max-w-[1720px] w-full mx-auto p-3.5 lg:p-5"></div>
+
+  <!-- ========================================================================= -->
+  <!-- 2. LEGACY / CLEANLINESS MONITORING (original workspace, unchanged) -->
+  <!-- ========================================================================= -->
+  <div id="view-legacy" class="hidden flex-1 flex-col">
   <main class="flex-1 max-w-[1720px] w-full mx-auto p-3.5 lg:p-5 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
     
     <!-- LEFT COLUMN: Camera Selector, Live Viewport, KPI Metrics (8 cols) -->
@@ -418,6 +445,7 @@
     </section>
 
   </main>
+  </div><!-- /#view-legacy -->
 
   <!-- ========================================================================= -->
   <!-- 3. LIGHTBOX EVIDENCE PREVIEW MODAL (LIGHT THEME) -->
@@ -1152,5 +1180,6 @@
     });
   </script>
 
+  <script src="/static/js/nav.js"></script>
 </body>
 </html>

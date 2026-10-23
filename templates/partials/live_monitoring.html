@@ -1,0 +1,124 @@
+<section class="flex flex-col gap-6" id="live-monitoring-section">
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="font-display font-extrabold text-2xl text-slate-900 dark:text-white">Live Multi-Camera Monitoring</h2>
+        <span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800 rounded-full">ByteTrack Active</span>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        Real-time person and accessory tracking with virtual tripwire crossing evaluations.
+      </p>
+    </div>
+
+    <!-- Privacy & Display Controls -->
+    <div class="flex items-center gap-3">
+      <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+        <input type="checkbox" id="toggle-privacy-blur" onchange="toggleBlurMode(this.checked)" class="rounded text-brand-600 focus:ring-brand-500">
+        <span>DPDP Privacy Blur (Viewer Mode)</span>
+      </label>
+      <span class="h-4 w-px bg-slate-200 dark:border-slate-700"></span>
+      <button onclick="reloadStream()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-all cursor-pointer">
+        Reconnect
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Viewport + Live Detections Sidebar -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+    <!-- Viewport Container (8 cols) -->
+    <div class="lg:col-span-8 flex flex-col gap-4">
+      <div class="relative bg-black rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-elevated aspect-video flex items-center justify-center">
+        <!-- Live Video Stream -->
+        <img id="live-stream-img" src="/video_feed" alt="Live Camera Feed" class="w-full h-full object-contain">
+
+        <!-- Tripwire Graphic Overlay Placeholder -->
+        <div id="tripwire-overlay" class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
+          <div class="flex items-center justify-between text-xs text-white/90 drop-shadow-md">
+            <span class="font-mono bg-black/60 px-2.5 py-1 rounded-md" id="active-cam-title">Camera #1 &bull; Main Entrance Gate</span>
+            <span class="bg-brand-600/90 text-white font-bold px-2 py-0.5 rounded-md text-[10px] uppercase">Tracking Online</span>
+          </div>
+          <!-- Simulated tripwire line indicator -->
+          <div class="w-full border-t-2 border-dashed border-emerald-400/80 flex items-center justify-between px-2 text-[10px] text-emerald-300 font-mono">
+            <span>&uarr; ENTRY TRIPWIRE</span>
+            <span>EXIT TRIPWIRE &darr;</span>
+          </div>
+          <div class="text-[11px] font-mono text-white/80 bg-black/50 px-2 py-1 rounded w-fit">
+            YOLO26 + ByteTrack &bull; 15 FPS &bull; Re-ID 512-d
+          </div>
+        </div>
+      </div>
+
+      <!-- Camera Selector Strip -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1" id="cam-selector-strip">
+        <button onclick="switchLiveCam(1, 'Main Entrance Gate')" class="px-3.5 py-2 rounded-xl bg-brand-600 text-white font-bold text-xs shadow-xs cursor-pointer">Cam 1: Entrance</button>
+        <button onclick="switchLiveCam(2, 'Promenade & Crosswalk')" class="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-brand-400 font-semibold text-xs cursor-pointer">Cam 2: Promenade</button>
+        <button onclick="switchLiveCam(3, 'Station Webcam')" class="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-brand-400 font-semibold text-xs cursor-pointer">Cam 3: Webcam</button>
+      </div>
+    </div>
+
+    <!-- Active Detections & Dwell List (4 cols) -->
+    <div class="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display font-bold text-sm text-slate-900 dark:text-white uppercase tracking-wider">Active In-Frame Persons</h3>
+        <span class="w-2.5 h-2.5 rounded-full bg-brand-500 beacon-active"></span>
+      </div>
+
+      <div id="live-tracks-list" class="space-y-3">
+        <!-- Live Track Item -->
+        <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-xs text-brand-600 dark:text-brand-400">Track #104 &bull; VIS-10023</span>
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800">Delivery</span>
+          </div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
+            <p><span class="font-semibold text-slate-700 dark:text-slate-300">Objects:</span> Backpack, Box (Package)</p>
+            <p><span class="font-semibold text-slate-700 dark:text-slate-300">Current Zone:</span> Entry Tripwire</p>
+            <p><span class="font-semibold text-slate-700 dark:text-slate-300">Dwell Duration:</span> 42s</p>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-xs text-brand-600 dark:text-brand-400">Track #105 &bull; VIS-10019</span>
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800">Technician</span>
+          </div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
+            <p><span class="font-semibold text-slate-700 dark:text-slate-300">Objects:</span> Tool Bag, Bottle</p>
+            <p><span class="font-semibold text-slate-700 dark:text-slate-300">Current Zone:</span> Public Promenade</p>
+            <p><span class="font-semibold text-slate-700 dark:text-slate-300">Dwell Duration:</span> 18s</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400">
+        Person features extracted at 15 FPS. High-confidence Re-ID matches are cross-referenced across cameras in real-time.
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  window.switchLiveCam = function(camId, camName) {
+    var titleEl = document.getElementById('active-cam-title');
+    if (titleEl) titleEl.innerText = 'Camera #' + camId + ' • ' + camName;
+
+    // Call legacy switch camera endpoint to change backend stream
+    fetch('/api/switch_camera/' + camId, { method: 'POST' })
+      .then(function() { reloadStream(); });
+  };
+
+  window.reloadStream = function() {
+    var img = document.getElementById('live-stream-img');
+    if (img) {
+      img.src = '/video_feed?t=' + new Date().getTime();
+    }
+  };
+
+  window.toggleBlurMode = function(isBlurred) {
+    var img = document.getElementById('live-stream-img');
+    if (img) {
+      img.style.filter = isBlurred ? 'blur(6px)' : 'none';
+    }
+  };
+</script>

@@ -1,0 +1,152 @@
+<section class="flex flex-col gap-6" id="alerts-section">
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="font-display font-extrabold text-2xl text-slate-900 dark:text-white">Active Security &amp; Anomaly Alerts</h2>
+        <span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-full flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500 beacon-alert"></span>
+          Live SSE Stream
+        </span>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+        Rule-based and behavioral anomaly flags: restricted area entry, prolonged loitering, unattended objects, and odd-hour visits.
+      </p>
+    </div>
+
+    <!-- Status Filter Strip -->
+    <div class="flex items-center gap-1.5 text-xs font-semibold">
+      <button onclick="filterAlertStatus('')" class="px-3 py-1.5 rounded-lg bg-brand-600 text-white font-bold cursor-pointer" id="alert-btn-all">All</button>
+      <button onclick="filterAlertStatus('NEW')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-brand-400 cursor-pointer" id="alert-btn-NEW">New</button>
+      <button onclick="filterAlertStatus('ACKNOWLEDGED')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-brand-400 cursor-pointer" id="alert-btn-ACKNOWLEDGED">Acknowledged</button>
+      <button onclick="filterAlertStatus('RESOLVED')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-brand-400 cursor-pointer" id="alert-btn-RESOLVED">Resolved</button>
+    </div>
+  </div>
+
+  <!-- Alerts Container -->
+  <div id="alerts-cards-container" class="space-y-3">
+    <div class="text-center py-10 text-sm text-slate-400">Loading active alerts...</div>
+  </div>
+</section>
+
+<script>
+  var currentAlertFilter = '';
+  var alertEventSource = null;
+
+  window.filterAlertStatus = function(status) {
+    currentAlertFilter = status;
+    ['', 'NEW', 'ACKNOWLEDGED', 'RESOLVED'].forEach(function(s) {
+      var id = 'alert-btn-' + (s ? s : 'all');
+      var el = document.getElementById(id);
+      if (el) {
+        if (s === status) {
+          el.className = 'px-3 py-1.5 rounded-lg bg-brand-600 text-white font-bold cursor-pointer';
+        } else {
+          el.className = 'px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-brand-400 cursor-pointer';
+        }
+      }
+    });
+    loadAlertsData();
+  };
+
+  window.loadAlertsData = function() {
+    var container = document.getElementById('alerts-cards-container');
+    if (!container) return;
+
+    var url = '/api/v2/alerts?limit=50';
+    if (currentAlertFilter) url += '&status=' + encodeURIComponent(currentAlertFilter);
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var alerts = data.alerts || [];
+        if (alerts.length === 0) {
+          container.innerHTML = '<div class="text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 text-sm text-slate-400 italic">No alerts found under current filter.</div>';
+          return;
+        }
+
+        var html = '';
+        alerts.forEach(function(a) {
+          html += renderAlertCard(a);
+        });
+        container.innerHTML = html;
+      });
+  };
+
+  function renderAlertCard(a) {
+    var sevBadge = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300';
+    if (a.severity === 'CRITICAL') sevBadge = 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950/60 dark:text-red-300';
+    if (a.severity === 'HIGH') sevBadge = 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300';
+
+    var statusBadge = 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300';
+    if (a.status === 'ACKNOWLEDGED') statusBadge = 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300';
+    if (a.status === 'RESOLVED') statusBadge = 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300';
+
+    var ts = a.created_at ? a.created_at.replace('T', ' ').substring(0, 19) : '—';
+
+    var actionsHtml = '';
+    if (a.status === 'NEW') {
+      actionsHtml = '<button onclick="acknowledgeAlert(' + a.id + ')" class="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs cursor-pointer shadow-xs">Acknowledge</button>' +
+                    '<button onclick="resolveAlert(' + a.id + ')" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer">Resolve</button>';
+    } else if (a.status === 'ACKNOWLEDGED') {
+      actionsHtml = '<button onclick="resolveAlert(' + a.id + ')" class="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs cursor-pointer shadow-xs">Mark Resolved</button>';
+    } else {
+      actionsHtml = '<span class="text-xs font-semibold text-brand-600 dark:text-brand-400 flex items-center gap-1">&check; Resolved</span>';
+    }
+
+    return '<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4" id="alert-card-' + a.id + '">' +
+      '<div class="flex items-start gap-3.5">' +
+        '<div class="mt-0.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ' + sevBadge + '">' + a.severity + '</div>' +
+        '<div>' +
+          '<div class="flex items-center gap-2">' +
+            '<span class="font-display font-bold text-sm text-slate-900 dark:text-white">' + escapeHtml(a.alert_type) + '</span>' +
+            '<span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ' + statusBadge + '">' + a.status + '</span>' +
+          '</div>' +
+          '<p class="text-xs text-slate-600 dark:text-slate-300 mt-1">' + escapeHtml(a.message) + '</p>' +
+          '<p class="text-[11px] font-mono text-slate-400 mt-1">' + ts + ' UTC &bull; Alert #' + a.id + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<div class="flex items-center gap-2 shrink-0 self-end sm:self-center">' +
+        actionsHtml +
+      '</div>' +
+    '</div>';
+  }
+
+  window.acknowledgeAlert = function(id) {
+    var token = localStorage.getItem('auth_token');
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    fetch('/api/v2/alerts/' + id + '/acknowledge', { method: 'POST', headers: headers })
+      .then(function() { loadAlertsData(); });
+  };
+
+  window.resolveAlert = function(id) {
+    var token = localStorage.getItem('auth_token');
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    fetch('/api/v2/alerts/' + id + '/resolve', { method: 'POST', headers: headers })
+      .then(function() { loadAlertsData(); });
+  };
+
+  // Connect Server-Sent Events (SSE)
+  if (!alertEventSource) {
+    try {
+      alertEventSource = new EventSource('/api/v2/alerts/stream');
+      alertEventSource.onmessage = function(e) {
+        try {
+          var item = JSON.parse(e.data);
+          if (item && item.id) {
+            var container = document.getElementById('alerts-cards-container');
+            if (container) {
+              container.insertAdjacentHTML('afterbegin', renderAlertCard(item));
+            }
+          }
+        } catch(ex) {}
+      };
+    } catch(ex) {}
+  }
+
+  loadAlertsData();
+</script>

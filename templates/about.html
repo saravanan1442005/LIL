@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — {{ product }}</title>
+  <meta name="description" content="{{ slogan }}">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class', theme: { extend: {
+      colors: { brand: { 50:'#ecfdf5',100:'#d1fae5',400:'#34d399',500:'#10b981',600:'#059669',700:'#047857',900:'#064e3b' } },
+      fontFamily: { sans: ['Plus Jakarta Sans','sans-serif'], display: ['Outfit','sans-serif'] } } } }
+    if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+  </script>
+</head>
+<body class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased">
+  <main class="max-w-3xl mx-auto p-6 lg:p-10">
+    <a href="/" class="text-xs text-brand-600 hover:underline">&larr; Back to dashboard</a>
+    <h1 class="font-display font-extrabold text-3xl mt-3 text-slate-900 dark:text-white">About {{ product }}</h1>
+    <p class="mt-2 text-lg text-brand-700 dark:text-brand-400 font-semibold leading-snug">{{ slogan }}</p>
+
+    <section class="mt-8 space-y-3">
+      <h2 class="font-display font-bold text-xl">Problem</h2>
+      <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        Delivery executives, technicians, vendors, domestic workers and visitors repeatedly visit premises, yet there is no
+        intelligent system to recognise recurring visitors and maintain a real-time history of their presence. During incidents,
+        manually reviewing CCTV footage is slow.
+      </p>
+    </section>
+
+    <section class="mt-8 space-y-3">
+      <h2 class="font-display font-bold text-xl">Primary module</h2>
+      <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        <strong>{{ primary_module }}</strong> detects and tracks people, recognises recurring individuals through person
+        re-identification, records time-stamped entry/exit, duration, zone and visible objects, flags anomalies, and lets
+        authorised users search history and auto-generate incident timelines.
+      </p>
+    </section>
+
+    <section class="mt-8 space-y-3">
+      <h2 class="font-display font-bold text-xl">Privacy first</h2>
+      <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        Faces and bodies are blurred by default, face recognition is off unless people are enrolled with consent, data is
+        retained for a configurable period, and every sensitive access is audit-logged. Designed with India's DPDP Act 2023 in mind.
+        See <code>PRIVACY.md</code>.
+      </p>
+    </section>
+
+    <section class="mt-8 space-y-3">
+      <h2 class="font-display font-bold text-xl">Legacy module</h2>
+      <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        The original <strong>{{ legacy_module }}</strong> (litter and waste-disposal violation detection) remains available
+        under its own tab and is no longer the focus of development.
+      </p>
+    </section>
+
+    <p class="mt-10 text-xs text-slate-400">Version {{ version }}</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# --- Secrets (never commit) ---
+.env
+.env.*
+!.env.example
+
+# --- Python ---
+.venv/
+.venv312/
+__pycache__/
+*.pyc
+
+# --- Runtime data / evidence (may contain personal data) ---
+violations/
+alert_log.json
+data/
+clips/
+snapshots/
+
+# --- Model weights (large; download separately) ---
+*.pt
+*.pth
+*.onnx
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db

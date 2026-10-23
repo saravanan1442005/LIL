@@ -1,0 +1,37 @@
+services:
+  ecolifybuddy:
+    build: .
+    container_name: ecolifybuddy_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://postgres:postgres@postgres_vector:5432/ecolifybuddy}
+      - DATABASE_URL_DIRECT=${DATABASE_URL_DIRECT:-postgresql+psycopg://postgres:postgres@postgres_vector:5432/ecolifybuddy}
+      - JWT_SECRET=${JWT_SECRET:-ecolifybuddy-production-secret-2026}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin@12345}
+      - FACE_RECOGNITION_ENABLED=false
+      - DETECTION_MODEL=yolo26n.pt
+      - RETENTION_DAYS=30
+    volumes:
+      - ./data:/app/data
+      - ./violations:/app/violations
+    depends_on:
+      - postgres_vector
+
+  postgres_vector:
+    image: pgvector/pgvector:pg16
+    container_name: ecolifybuddy_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ecolifybuddy
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+
+volumes:
+  pgvector_data:

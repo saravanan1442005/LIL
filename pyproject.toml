@@ -1,7 +1,15 @@
+[project]
+name = "ecolifybuddy"
+version = "5.0.0"
+description = "An AI-Based CCTV Intelligence System for Visitor Identification, Activity Tracking, and Safer, Cleaner Communities"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+
 [tool.pyright]
 extraPaths = [
-    "C:/Users/vicky/AppData/Local/Programs/Python/Python314/Lib/site-packages",
     "c:/LIL"
 ]
-pythonVersion = "3.14"
+venvPath = "."
+venv = ".venv312"
+pythonVersion = "3.12"
 pythonPlatform = "Windows"

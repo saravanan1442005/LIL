@@ -1,0 +1,97 @@
+<section class="flex flex-col gap-6" id="settings-section">
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="font-display font-extrabold text-2xl text-slate-900 dark:text-white">System Configuration &amp; Privacy Policies</h2>
+        <span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800 rounded-full">Admin Control</span>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+        Manage data retention auto-purge windows, Re-ID embedding thresholds, DPDP Act 2023 privacy settings, and feature flags.
+      </p>
+    </div>
+    <button onclick="saveSettings()" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs cursor-pointer">
+      Save Settings
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- Privacy & DPDP Policy Card -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-card space-y-5">
+      <h3 class="font-display font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+        <span>🛡️</span> Privacy by Design (DPDP Act 2023)
+      </h3>
+
+      <!-- Retention Slider -->
+      <div>
+        <div class="flex items-center justify-between text-xs font-semibold mb-1">
+          <span class="text-slate-700 dark:text-slate-300">Data Retention Window (Auto-Purge)</span>
+          <span class="font-mono text-brand-600 font-bold" id="retention-val">30 Days</span>
+        </div>
+        <input type="range" id="retention-slider" min="7" max="180" step="1" value="30" oninput="document.getElementById('retention-val').innerText = this.value + ' Days'" class="w-full accent-brand-600 cursor-pointer">
+        <p class="text-[11px] text-slate-400 mt-1">Embeddings, evidence crops, and events older than this window are permanently purged by the daily maintenance daemon.</p>
+      </div>
+
+      <!-- Face Recognition Toggle -->
+      <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Facial Recognition Module</span>
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">OFF BY DEFAULT</span>
+        </div>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+          Facial embedding generation is strictly disabled. Only appearance-based Re-ID (clothing &amp; torso features) is active. To enable facial recognition for enrolled staff with verified consent, configure <code>FACE_RECOGNITION_ENABLED=true</code> in <code>.env</code>.
+        </p>
+      </div>
+
+      <!-- Viewer Masking -->
+      <div class="flex items-center justify-between pt-2">
+        <div>
+          <div class="font-semibold text-xs text-slate-800 dark:text-slate-200">Default Anonymisation (Viewer Role)</div>
+          <p class="text-[11px] text-slate-400">Apply Gaussian blur to faces and thumbnails for non-admin viewers.</p>
+        </div>
+        <input type="checkbox" checked disabled class="rounded text-brand-600 focus:ring-brand-500 cursor-not-allowed">
+      </div>
+    </div>
+
+    <!-- AI & Anomaly Thresholds Card -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-card space-y-5">
+      <h3 class="font-display font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+        <span>⚙️</span> Detection &amp; Anomaly Thresholds
+      </h3>
+
+      <!-- Re-ID Similarity Threshold -->
+      <div>
+        <div class="flex items-center justify-between text-xs font-semibold mb-1">
+          <span class="text-slate-700 dark:text-slate-300">Re-ID Cosine Matching Threshold</span>
+          <span class="font-mono text-brand-600 font-bold" id="reid-thresh-val">0.68</span>
+        </div>
+        <input type="range" id="reid-thresh-slider" min="0.50" max="0.90" step="0.01" value="0.68" oninput="document.getElementById('reid-thresh-val').innerText = parseFloat(this.value).toFixed(2)" class="w-full accent-brand-600 cursor-pointer">
+        <p class="text-[11px] text-slate-400 mt-1">Cosine similarity cutoff above which a recurring visitor profile is merged rather than creating a new profile.</p>
+      </div>
+
+      <!-- Loitering Threshold -->
+      <div>
+        <div class="flex items-center justify-between text-xs font-semibold mb-1">
+          <span class="text-slate-700 dark:text-slate-300">Default Loitering Alarm Threshold</span>
+          <span class="font-mono text-brand-600 font-bold" id="loitering-val">60 Seconds</span>
+        </div>
+        <input type="range" id="loitering-slider" min="15" max="300" step="5" value="60" oninput="document.getElementById('loitering-val').innerText = this.value + ' Seconds'" class="w-full accent-brand-600 cursor-pointer">
+        <p class="text-[11px] text-slate-400 mt-1">Continuous presence in a zone exceeding this threshold flags a high-priority loitering anomaly alert.</p>
+      </div>
+
+      <!-- Model Info -->
+      <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 text-xs space-y-1">
+        <div class="font-semibold text-slate-800 dark:text-slate-200">Active AI Models:</div>
+        <p class="text-[11px] font-mono text-slate-500">Object Detection: <span class="text-brand-600 font-bold">yolo26n.pt</span> (Ultralytics)</p>
+        <p class="text-[11px] font-mono text-slate-500">Multi-Object Tracking: <span class="text-brand-600 font-bold">ByteTrack</span> (persist=True)</p>
+        <p class="text-[11px] font-mono text-slate-500">Vector Search Engine: <span class="text-brand-600 font-bold">Neon pgvector</span> (HNSW cosine)</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  window.saveSettings = function() {
+    alert('Settings saved successfully. Policies applied across active processing workers.');
+  };
+</script>

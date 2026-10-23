@@ -1,0 +1,94 @@
+<section class="flex flex-col gap-6" id="audit-section">
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-card">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="font-display font-extrabold text-2xl text-slate-900 dark:text-white">Immutable Audit Trail</h2>
+        <span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800 rounded-full">DPDP Act 2023 Compliant</span>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+        Tamper-evident, cryptographically timestamped record of user logins, camera &amp; zone reconfigurations, forensic search queries, timeline exports, and un-masking justifications.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="loadAuditLogs()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all cursor-pointer" title="Refresh">
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Audit Table -->
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+            <th class="p-3.5">Timestamp (UTC)</th>
+            <th class="p-3.5">User</th>
+            <th class="p-3.5">Role</th>
+            <th class="p-3.5">Action</th>
+            <th class="p-3.5">Target</th>
+            <th class="p-3.5">Reason / Details</th>
+            <th class="p-3.5">IP Address</th>
+          </tr>
+        </thead>
+        <tbody id="audit-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
+          <tr>
+            <td colspan="7" class="p-8 text-center text-slate-400">Loading audit records...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+  window.loadAuditLogs = function() {
+    var tbody = document.getElementById('audit-table-body');
+    if (!tbody) return;
+
+    var token = localStorage.getItem('auth_token');
+    var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+
+    fetch('/api/v2/audit', { headers: headers })
+      .then(function(r) {
+        if (r.status === 401 || r.status === 403) {
+          throw new Error('Audit logs are restricted to Admin and Auditor roles. Please sign in via the "Sign in" tab with an authorized account.');
+        }
+        return r.json();
+      })
+      .then(function(data) {
+        var logs = data.logs || [];
+        if (logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400 italic">No audit records logged yet.</td></tr>';
+          return;
+        }
+
+        var html = '';
+        logs.forEach(function(l) {
+          var actionColor = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+          if (l.action === 'LOGIN') actionColor = 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300';
+          if (l.action.indexOf('CREATE') !== -1) actionColor = 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300';
+          if (l.action.indexOf('DELETE') !== -1) actionColor = 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300';
+
+          var detailStr = l.reason || (l.details ? JSON.stringify(l.details) : '—');
+
+          html += '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
+            '<td class="p-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">' + (l.timestamp ? l.timestamp.replace('T', ' ').substring(0, 19) : '—') + '</td>' +
+            '<td class="p-3.5 font-medium text-slate-900 dark:text-white">' + escapeHtml(l.user_email) + '</td>' +
+            '<td class="p-3.5"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">' + l.role + '</span></td>' +
+            '<td class="p-3.5"><span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ' + actionColor + '">' + l.action + '</span></td>' +
+            '<td class="p-3.5 text-slate-600 dark:text-slate-400">' + (l.target_type ? (l.target_type + (l.target_id ? ' #' + l.target_id : '')) : '—') + '</td>' +
+            '<td class="p-3.5 text-slate-600 dark:text-slate-400 max-w-xs truncate" title="' + escapeHtml(detailStr) + '">' + escapeHtml(detailStr) + '</td>' +
+            '<td class="p-3.5 font-mono text-[11px] text-slate-400">' + (l.ip_address || '—') + '</td>' +
+          '</tr>';
+        });
+        tbody.innerHTML = html;
+      })
+      .catch(function(err) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-amber-600 dark:text-amber-400">' + err.message + '</td></tr>';
+      });
+  };
+
+  loadAuditLogs();
+</script>

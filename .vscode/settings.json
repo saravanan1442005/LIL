@@ -1,11 +1,9 @@
 {
-  "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+  "python.defaultInterpreterPath": "${workspaceFolder}\\.venv312\\Scripts\\python.exe",
   "python.analysis.extraPaths": [
-    "${workspaceFolder}",
-    "C:\\Users\\vicky\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages"
+    "${workspaceFolder}"
   ],
   "python.autoComplete.extraPaths": [
-    "${workspaceFolder}",
-    "C:\\Users\\vicky\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages"
+    "${workspaceFolder}"
   ]
 }

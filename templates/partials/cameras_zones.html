@@ -1,0 +1,300 @@
+<section class="flex flex-col gap-6" id="cameras-zones-section">
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-card">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="font-display font-extrabold text-2xl text-slate-900 dark:text-white">Cameras &amp; Virtual Zones</h2>
+        <span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800 rounded-full">Phase 2 Active</span>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+        Manage live stream ingestion endpoints (RTSP, USB Webcam, Video Demo, YouTube) and configure virtual entry/exit tripwire lines and restricted zone polygons.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="openNewCameraModal()" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+        <span>Add Camera</span>
+      </button>
+      <button onclick="loadCamerasData()" class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all cursor-pointer" title="Refresh">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Camera Grid Container -->
+  <div id="cameras-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+    <div class="col-span-full text-center py-12 text-sm text-slate-400">Loading registered cameras...</div>
+  </div>
+
+  <!-- Add Camera Modal -->
+  <div id="modal-add-camera" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-elevated p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display font-bold text-lg text-slate-900 dark:text-white">Register New Camera</h3>
+        <button onclick="closeNewCameraModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">&times;</button>
+      </div>
+      <form id="form-add-camera" onsubmit="submitNewCamera(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Camera Name *</label>
+          <input required id="cam-name" type="text" placeholder="e.g. Gate 1 Entry Turnstile" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Premises Location / Zone</label>
+          <input id="cam-loc" type="text" placeholder="e.g. North Perimeter / Block A" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Stream Protocol</label>
+            <select id="cam-type" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+              <option value="RTSP">RTSP / IP Camera</option>
+              <option value="WEBCAM">USB Webcam (Index)</option>
+              <option value="FILE">Local Demo Video</option>
+              <option value="YOUTUBE">YouTube Live Stream</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Target FPS</label>
+            <input id="cam-fps" type="number" min="5" max="60" value="15" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Stream URI / Device Path *</label>
+          <input required id="cam-source" type="text" placeholder="rtsp://admin:pass@192.168.1.100:554/live or 0" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-mono text-[11px]">
+        </div>
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeNewCameraModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold cursor-pointer">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold cursor-pointer">Save Camera</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Zone Modal -->
+  <div id="modal-add-zone" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-elevated p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display font-bold text-lg text-slate-900 dark:text-white">Add Zone / Virtual Tripwire</h3>
+        <button onclick="closeNewZoneModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">&times;</button>
+      </div>
+      <form id="form-add-zone" onsubmit="submitNewZone(event)" class="space-y-3.5 text-xs">
+        <input type="hidden" id="zone-cam-id">
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Zone Name *</label>
+          <input required id="zone-name" type="text" placeholder="e.g. Main Entry Tripwire, Secure Server Room" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Zone Classification</label>
+            <select id="zone-type" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+              <option value="ENTRY_EXIT">ENTRY_EXIT (Tripwire Line)</option>
+              <option value="RESTRICTED">RESTRICTED (Alert on Entry)</option>
+              <option value="LOITERING">LOITERING (Dwell Alarm)</option>
+              <option value="GENERAL">GENERAL (Activity Area)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Dwell Alert Limit (seconds)</label>
+            <input id="zone-dwell" type="number" min="5" max="3600" value="60" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Virtual Line Coordinates (X1, Y1, X2, Y2)</label>
+          <input id="zone-line" type="text" value="[[100, 320], [540, 320]]" placeholder="[[x1,y1],[x2,y2]]" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-mono text-[11px]">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Polygon Bounding Coordinates (Optional)</label>
+          <input id="zone-poly" type="text" placeholder="[[100,200],[500,200],[500,450],[100,450]]" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-mono text-[11px]">
+        </div>
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeNewZoneModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold cursor-pointer">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold cursor-pointer">Save Zone</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+  window.loadCamerasData = function() {
+    var container = document.getElementById('cameras-grid');
+    if (!container) return;
+    container.innerHTML = '<div class="col-span-full text-center py-8 text-sm text-slate-400">Loading cameras and zones...</div>';
+
+    fetch('/api/v2/cameras')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var cameras = data.cameras || [];
+        if (cameras.length === 0) {
+          container.innerHTML = '<div class="col-span-full text-center py-8 text-sm text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8">No cameras registered yet. Click <strong>Add Camera</strong> above to add one.</div>';
+          return;
+        }
+
+        var html = '';
+        cameras.forEach(function(cam) {
+          var zonesHtml = '';
+          if (cam.zones && cam.zones.length > 0) {
+            zonesHtml = '<div class="space-y-2 mt-3">';
+            cam.zones.forEach(function(z) {
+              var badgeColor = 'bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-950/40 dark:text-brand-300';
+              if (z.zone_type === 'RESTRICTED') badgeColor = 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300';
+              if (z.zone_type === 'LOITERING') badgeColor = 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300';
+              
+              zonesHtml += '<div class="flex items-center justify-between text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">' +
+                '<div class="flex items-center gap-2">' +
+                  '<span class="font-bold text-slate-800 dark:text-slate-200">' + escapeHtml(z.name) + '</span>' +
+                  '<span class="px-2 py-0.5 text-[9px] font-bold uppercase rounded-md border ' + badgeColor + '">' + z.zone_type + '</span>' +
+                '</div>' +
+                '<div class="flex items-center gap-2 text-[11px] text-slate-500">' +
+                  '<span>Dwell: ' + z.dwell_threshold_seconds + 's</span>' +
+                  '<button onclick="deleteZone(' + z.id + ')" class="text-red-500 hover:text-red-700 ml-1 cursor-pointer" title="Delete Zone">&times;</button>' +
+                '</div>' +
+              '</div>';
+            });
+            zonesHtml += '</div>';
+          } else {
+            zonesHtml = '<p class="text-xs text-slate-400 italic mt-2">No virtual zones configured on this stream.</p>';
+          }
+
+          html += '<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between">' +
+            '<div>' +
+              '<div class="flex items-start justify-between gap-3">' +
+                '<div>' +
+                  '<div class="flex items-center gap-2">' +
+                    '<h3 class="font-display font-bold text-base text-slate-900 dark:text-white">' + escapeHtml(cam.name) + '</h3>' +
+                    '<span class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">' + cam.stream_type + '</span>' +
+                  '</div>' +
+                  '<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">' + escapeHtml(cam.location || 'General') + ' &bull; ' + cam.resolution + ' @ ' + cam.fps + ' FPS</p>' +
+                '</div>' +
+                '<div class="flex items-center gap-1.5">' +
+                  '<span class="w-2.5 h-2.5 rounded-full ' + (cam.enabled ? 'bg-brand-500 beacon-active' : 'bg-slate-300') + '"></span>' +
+                  '<span class="text-xs font-semibold text-slate-600 dark:text-slate-300">' + (cam.enabled ? 'Active' : 'Disabled') + '</span>' +
+                '</div>' +
+              '</div>' +
+
+              '<div class="mt-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 text-[11px] font-mono text-slate-600 dark:text-slate-400 truncate" title="' + escapeHtml(cam.stream_source) + '">' +
+                '<span class="font-bold text-slate-400">URI:</span> ' + escapeHtml(cam.stream_source) +
+              '</div>' +
+
+              '<div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">' +
+                '<div class="flex items-center justify-between">' +
+                  '<span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Virtual Zones &amp; Tripwires (' + (cam.zones ? cam.zones.length : 0) + ')</span>' +
+                  '<button onclick="openNewZoneModal(' + cam.id + ')" class="text-xs text-brand-600 hover:text-brand-700 font-bold flex items-center gap-1 cursor-pointer">+ Add Zone</button>' +
+                '</div>' +
+                zonesHtml +
+              '</div>' +
+            '</div>' +
+
+            '<div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">' +
+              '<span class="text-slate-400 text-[11px]">Camera ID: ' + cam.id + '</span>' +
+              '<div class="flex items-center gap-2">' +
+                '<button onclick="deleteCamera(' + cam.id + ')" class="text-red-500 hover:text-red-700 text-xs font-semibold cursor-pointer">Delete</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        });
+
+        container.innerHTML = html;
+      })
+      .catch(function(err) {
+        container.innerHTML = '<div class="col-span-full text-center py-8 text-sm text-red-500">Failed to load cameras: ' + err.message + '</div>';
+      });
+  };
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, function(m) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m];
+    });
+  }
+
+  window.openNewCameraModal = function() {
+    document.getElementById('modal-add-camera').classList.remove('hidden');
+  };
+  window.closeNewCameraModal = function() {
+    document.getElementById('modal-add-camera').classList.add('hidden');
+  };
+
+  window.openNewZoneModal = function(camId) {
+    document.getElementById('zone-cam-id').value = camId;
+    document.getElementById('modal-add-zone').classList.remove('hidden');
+  };
+  window.closeNewZoneModal = function() {
+    document.getElementById('modal-add-zone').classList.add('hidden');
+  };
+
+  window.submitNewCamera = function(e) {
+    e.preventDefault();
+    var payload = {
+      name: document.getElementById('cam-name').value,
+      location: document.getElementById('cam-loc').value,
+      stream_type: document.getElementById('cam-type').value,
+      fps: parseInt(document.getElementById('cam-fps').value, 10),
+      stream_source: document.getElementById('cam-source').value,
+      enabled: true
+    };
+
+    fetch('/api/v2/cameras', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.error) { alert('Error: ' + res.error); return; }
+      closeNewCameraModal();
+      document.getElementById('form-add-camera').reset();
+      loadCamerasData();
+    })
+    .catch(function(err) { alert('Request failed: ' + err.message); });
+  };
+
+  window.submitNewZone = function(e) {
+    e.preventDefault();
+    var camId = document.getElementById('zone-cam-id').value;
+    var lineCoords = null;
+    var polyCoords = null;
+
+    try { lineCoords = JSON.parse(document.getElementById('zone-line').value); } catch(ex) {}
+    try {
+      var p = document.getElementById('zone-poly').value;
+      if (p) polyCoords = JSON.parse(p);
+    } catch(ex) {}
+
+    var payload = {
+      name: document.getElementById('zone-name').value,
+      zone_type: document.getElementById('zone-type').value,
+      dwell_threshold_seconds: parseInt(document.getElementById('zone-dwell').value, 10),
+      entry_line_coords: lineCoords,
+      polygon_coords: polyCoords
+    };
+
+    fetch('/api/v2/cameras/' + camId + '/zones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.error) { alert('Error: ' + res.error); return; }
+      closeNewZoneModal();
+      document.getElementById('form-add-zone').reset();
+      loadCamerasData();
+    })
+    .catch(function(err) { alert('Request failed: ' + err.message); });
+  };
+
+  window.deleteCamera = function(id) {
+    if (!confirm('Are you sure you want to delete Camera #' + id + '?')) return;
+    fetch('/api/v2/cameras/' + id, { method: 'DELETE' })
+      .then(function() { loadCamerasData(); });
+  };
+
+  window.deleteZone = function(id) {
+    if (!confirm('Delete this virtual zone?')) return;
+    fetch('/api/v2/zones/' + id, { method: 'DELETE' })
+      .then(function() { loadCamerasData(); });
+  };
+
+  // Auto-load on view render
+  loadCamerasData();
+</script>
