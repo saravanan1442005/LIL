@@ -12,6 +12,7 @@ from services.search_service import (
 )
 from services.audit_service import log_audit_event
 from services.auth_service import jwt_required
+from api.pagination import parse_pagination
 
 search_bp = Blueprint("search", __name__, url_prefix="/api/v2")
 
@@ -30,8 +31,11 @@ def search():
         if val:
             filters[key] = val
 
-    limit = min(int(request.args.get("limit", 50)), 200)
-    offset = int(request.args.get("offset", 0))
+    limit, offset, pagination_error = parse_pagination(
+        request.args.get("limit"), request.args.get("offset")
+    )
+    if pagination_error:
+        return jsonify({"error": pagination_error}), 400
 
     session: Session = get_session_factory()()
     try:

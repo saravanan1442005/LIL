@@ -6,6 +6,7 @@ import os
 import glob
 import json
 import threading
+import queue
 import webbrowser
 import datetime
 from flask import Flask, render_template, Response, jsonify, request, send_from_directory
@@ -16,6 +17,7 @@ from rule_engine import EcoRuleEngine
 from alert_system import AlertSystem, VIOLATIONS_DIR, ALERT_LOG_FILE
 from config import load_config, save_config
 from stream_resolver import resolve_stream_source, is_youtube_url, resolve_youtube_stream
+from services.anpr_service import ANPRService, aggregate_plate_reads
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -109,6 +111,18 @@ class LiveMonitorState:
         self.fps = 0.0
         self.last_alert_time = 0
         self.alert_text = "Clean"
+        anpr_settings = config.get("anpr_settings", {})
+        self.anpr_enabled = bool(anpr_settings.get("enabled", False))
+        self.anpr_profile = anpr_settings
+        self.anpr_service = ANPRService(anpr_settings.get("model_path") or os.getenv("ANPR_MODEL_PATH") or None)
+        self.anpr_queue = queue.Queue(maxsize=2)
+        self.anpr_result = {
+            "status": "DISABLED" if not self.anpr_enabled else "STARTING",
+            "reads": [],
+            "candidate": None,
+            "requires_guard_confirmation": True,
+        }
+        self.anpr_history = []
         
         # AI Modules
         model_name = os.getenv("DETECTION_MODEL", "yolo26n.pt")
@@ -239,6 +253,38 @@ class LiveMonitorState:
 
 state = LiveMonitorState()
 
+
+def anpr_worker_loop():
+    """Process a bounded stream of high-resolution frames without blocking video."""
+    while True:
+        try:
+            camera_id, frame, profile = state.anpr_queue.get()
+            result = state.anpr_service.read_frame(frame, profile)
+            reads = result.get("reads", [])
+            with state.lock:
+                state.anpr_history.extend(reads)
+                state.anpr_history = state.anpr_history[-12:]
+                candidate = aggregate_plate_reads(
+                    state.anpr_history,
+                    minimum_frames=int(profile.get("minimum_consensus_frames", 2)),
+                )
+                state.anpr_result = {
+                    "status": result.get("status", "UNKNOWN"),
+                    "camera_id": camera_id,
+                    "reads": reads,
+                    "candidate": candidate,
+                    "requires_guard_confirmation": True,
+                }
+        except (queue.Empty, ValueError, TypeError, RuntimeError) as error:
+            with state.lock:
+                state.anpr_result = {
+                    "status": "ERROR",
+                    "error": str(error),
+                    "reads": [],
+                    "candidate": None,
+                    "requires_guard_confirmation": True,
+                }
+
 # ==============================================================================
 # BACKGROUND CAMERA & DETECTION WORKER
 # ==============================================================================
@@ -319,6 +365,14 @@ def camera_worker_loop():
         objects_c = 0
         is_violating = False
         frame_idx += 1
+
+        if state.anpr_enabled and frame_idx % 10 == 0:
+            profile = dict(state.anpr_profile)
+            profile["detector_threshold"] = profile.get("detector_threshold", 0.35)
+            try:
+                state.anpr_queue.put_nowait((state.active_camera_id, frame.copy(), profile))
+            except queue.Full:
+                pass
 
         # --- AI DETECTION & TRACKING PIPELINE (HIGH-PERFORMANCE) ---
         if state.ai_enabled:
@@ -420,6 +474,8 @@ def camera_worker_loop():
 # Start background camera capture thread
 capture_thread = threading.Thread(target=camera_worker_loop, daemon=True)
 capture_thread.start()
+anpr_thread = threading.Thread(target=anpr_worker_loop, daemon=True)
+anpr_thread.start()
 
 # ==============================================================================
 # STREAMING & WEB ROUTES
@@ -493,7 +549,23 @@ def get_status():
             "object_count": state.object_count,
             "fps": state.fps,
             "latest_snap": state.latest_snapped_file,
+            "anpr": {
+                "enabled": state.anpr_enabled,
+                "readiness": state.anpr_service.readiness(),
+                "result": state.anpr_result,
+            },
             "total_violations": len(glob.glob(os.path.join(VIOLATIONS_DIR, "*.jpg")))
+        })
+
+
+@app.route('/api/anpr')
+def get_anpr_status():
+    """Return the latest non-admission ANPR candidate and runtime readiness."""
+    with state.lock:
+        return jsonify({
+            "enabled": state.anpr_enabled,
+            "readiness": state.anpr_service.readiness(),
+            "result": state.anpr_result,
         })
 
 

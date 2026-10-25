@@ -8,7 +8,7 @@ from sqlalchemy import text
 from database.connection import Base, get_db, get_engine, get_session_factory, is_postgres
 from database.models import (
     User, AuditLog, Camera, Zone, Visitor, VisitorEmbedding,
-    Consent, FaceEnrollment, Track, Event, Alert, SensorEvent
+    Consent, FaceEnrollment, OTPChallenge, VisitorEntry, PlateRead, Track, Event, Alert, SensorEvent
 )
 from services.auth_service import hash_password
 
@@ -33,6 +33,7 @@ def init_db(seed_admin: bool = True, seed_default_cameras: bool = True):
         # Create all tables
         Base.metadata.create_all(bind=conn)
         conn.commit()
+        _ensure_visitor_columns(conn)
 
         # Create HNSW vector index on Postgres
         if engine.dialect.name == "postgresql":
@@ -120,3 +121,27 @@ def init_db(seed_admin: bool = True, seed_default_cameras: bool = True):
                 session.add_all([z1, z2])
                 session.commit()
                 logger.info("Seeded default cameras and zones.")
+
+
+def _ensure_visitor_columns(conn):
+    """Add enrollment fields to databases created before the registration module."""
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    existing = {column["name"] for column in inspector.get_columns("visitors")}
+    columns = {
+        "full_name": "VARCHAR(150)",
+        "phone_hash": "VARCHAR(128)",
+        "phone_last4": "VARCHAR(4)",
+        "phone_verified": "BOOLEAN NOT NULL DEFAULT 0",
+        "company": "VARCHAR(150)",
+        "vehicle_number": "VARCHAR(32)",
+        "profile_photo_path": "VARCHAR(500)",
+        "face_enrolled": "BOOLEAN NOT NULL DEFAULT 0",
+        "plate_enrolled": "BOOLEAN NOT NULL DEFAULT 0",
+        "consent_status": "VARCHAR(30) NOT NULL DEFAULT 'NOT_REQUIRED'",
+    }
+    for name, definition in columns.items():
+        if name not in existing:
+            conn.execute(text(f"ALTER TABLE visitors ADD COLUMN {name} {definition}"))
+    conn.commit()

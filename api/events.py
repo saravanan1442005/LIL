@@ -5,6 +5,7 @@ from flask import Blueprint, request, jsonify
 from sqlalchemy.orm import Session
 from database.connection import get_session_factory
 from database.models import Event, Visitor, Camera
+from api.pagination import parse_pagination
 
 events_bp = Blueprint("events", __name__, url_prefix="/api/v2/events")
 
@@ -18,8 +19,11 @@ def list_events():
         event_type = request.args.get("event_type")
         camera_id = request.args.get("camera_id")
         visitor_id = request.args.get("visitor_id")
-        limit = min(int(request.args.get("limit", 50)), 200)
-        offset = int(request.args.get("offset", 0))
+        limit, offset, pagination_error = parse_pagination(
+            request.args.get("limit"), request.args.get("offset")
+        )
+        if pagination_error:
+            return jsonify({"error": pagination_error}), 400
 
         if event_type:
             query = query.filter(Event.event_type == event_type)

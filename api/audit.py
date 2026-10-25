@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database.connection import get_session_factory
 from database.models import AuditLog
 from services.auth_service import roles_required
+from api.pagination import parse_pagination
 
 audit_bp = Blueprint("audit", __name__, url_prefix="/api/v2")
 
@@ -21,8 +22,11 @@ def get_audit_logs():
         role = request.args.get("role")
         user_email = request.args.get("user_email")
         target_type = request.args.get("target_type")
-        limit = min(int(request.args.get("limit", 50)), 200)
-        offset = int(request.args.get("offset", 0))
+        limit, offset, pagination_error = parse_pagination(
+            request.args.get("limit"), request.args.get("offset")
+        )
+        if pagination_error:
+            return jsonify({"error": pagination_error}), 400
 
         if action:
             query = query.filter(AuditLog.action == action)

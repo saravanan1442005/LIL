@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database.connection import get_session_factory
 from database.models import SensorEvent
 from services.sensor_service import ingest_sensor_event
+from api.pagination import parse_pagination
 
 sensors_bp = Blueprint("sensors", __name__, url_prefix="/api/v2/sensors")
 
@@ -41,7 +42,11 @@ def receive_sensor_event():
 def list_sensor_events():
     session: Session = get_session_factory()()
     try:
-        limit = min(int(request.args.get("limit", 50)), 100)
+        limit, _, pagination_error = parse_pagination(
+            request.args.get("limit"), None, max_limit=100
+        )
+        if pagination_error:
+            return jsonify({"error": pagination_error}), 400
         events = (
             session.query(SensorEvent)
             .order_by(SensorEvent.timestamp.desc())

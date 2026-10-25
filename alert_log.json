@@ -738,5 +738,405 @@
     "num_violations": 1,
     "evidence_path": "violations\\violation_20261008_132329.jpg",
     "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 15:34:39",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_153439.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 15:35:01",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_153501.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 15:35:36",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_153536.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 15:35:39",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_153539.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 15:36:23",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_153623.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 15:47:34",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_154734.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 18:52:31",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_185231.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 19:16:06",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_191606.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 19:16:09",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_191609.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 19:19:39",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_191939.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:16:07",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_201607.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:18:25",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_201825.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:21:57",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_202157.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:22:01",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_202201.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:22:05",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_202205.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:22:09",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_202209.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:22:12",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_202212.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:22:17",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_202217.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:22:20",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 2,
+    "evidence_path": "violations\\violation_20261024_202220.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:58:34",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_205834.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 20:58:42",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_205842.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 21:13:38",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_211338.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 21:21:55",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_212155.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 21:31:37",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_213137.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 21:40:59",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_214059.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 21:55:40",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_215540.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 21:55:49",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_215549.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:01:06",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_220106.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:01:09",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_220109.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:01:12",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_220112.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:01:15",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_220115.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:03:26",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_220326.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:03:29",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_220329.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:06:49",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_220649.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:18:26",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_221826.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:46:37",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_224637.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:46:40",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_224640.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:46:43",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_224643.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 22:46:47",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_224647.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-24 23:02:12",
+    "camera_id": 1,
+    "camera_name": "Balneario Camboriu - Central",
+    "zone": "Boardwalk / Public Promenade",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261024_230212.jpg",
+    "acknowledged": false
   }
 ]

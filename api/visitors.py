@@ -11,6 +11,7 @@ from services.visitor_service import (
     get_visitor_details, merge_visitor_profiles, purge_visitor_data
 )
 from services.audit_service import log_audit_event
+from api.pagination import parse_pagination
 
 visitors_bp = Blueprint("visitors", __name__, url_prefix="/api/v2/visitors")
 
@@ -23,8 +24,11 @@ def list_visitors():
 
         category = request.args.get("category")
         q = request.args.get("q")
-        limit = min(int(request.args.get("limit", 50)), 200)
-        offset = int(request.args.get("offset", 0))
+        limit, offset, pagination_error = parse_pagination(
+            request.args.get("limit"), request.args.get("offset")
+        )
+        if pagination_error:
+            return jsonify({"error": pagination_error}), 400
 
         if category and category != "ALL":
             query = query.filter(Visitor.category == category)

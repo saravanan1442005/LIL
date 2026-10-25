@@ -13,6 +13,7 @@ def register_blueprints(app: Flask) -> None:
     from api.search import search_bp
     from api.analytics import analytics_bp
     from api.sensors import sensors_bp
+    from api.registration import registration_bp
 
     app.register_blueprint(ui_bp)
     app.register_blueprint(auth_bp)
@@ -24,3 +25,4 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(search_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(sensors_bp)
+    app.register_blueprint(registration_bp)

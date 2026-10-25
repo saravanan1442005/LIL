@@ -11,6 +11,36 @@
       </p>
     </div>
 
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h3 class="font-display font-bold text-lg text-slate-900 dark:text-white">Guard-led visitor enrollment</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Verify the phone, capture the visitor details, then confirm each entry from a candidate match.</p>
+        </div>
+        <span id="enrollment-status" class="text-xs text-slate-500">Phone not verified</span>
+      </div>
+      <form id="visitor-enrollment-form" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4 text-xs" enctype="multipart/form-data">
+        <div class="md:col-span-2 flex gap-2">
+          <input id="enroll-phone" name="phone" required inputmode="tel" placeholder="Phone number" class="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+          <button type="button" onclick="sendVisitorOtp()" class="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold">Send OTP</button>
+        </div>
+        <div class="flex gap-2">
+          <input id="enroll-otp" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" class="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+          <button type="button" onclick="verifyVisitorOtp()" class="px-4 py-2 rounded-xl bg-brand-600 text-white font-bold">Verify</button>
+        </div>
+        <input name="full_name" required placeholder="Full name" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+        <input name="vehicle_number" placeholder="Bike / vehicle number" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+        <input name="company" placeholder="Company" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+        <select name="category" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+          <option>Unknown</option><option>Delivery</option><option>Technician</option><option>Vendor</option><option>Domestic Worker</option><option>Guest</option>
+        </select>
+        <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+        <label class="flex items-center gap-2 px-2 py-2"><input name="face_consent" value="true" type="checkbox"> Visitor consented to face enrollment</label>
+        <button type="submit" class="md:col-span-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold">Register visitor</button>
+      </form>
+      <p id="enrollment-message" class="text-xs mt-3" role="status"></p>
+    </div>
+
     <!-- Category Filter Strip & Search Bar -->
     <div class="flex items-center gap-2 flex-wrap">
       <input id="visitor-search-input" type="text" placeholder="Search visitor code or label..." onkeyup="if(event.key==='Enter') loadVisitorsData()" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-100 w-56">
@@ -91,6 +121,55 @@
 
 <script>
   var currentCatFilter = 'ALL';
+  var visitorPhoneVerified = false;
+
+  function enrollmentMessage(text, error) {
+    var el = document.getElementById('enrollment-message');
+    if (el) {
+      el.textContent = text;
+      el.className = 'text-xs mt-3 ' + (error ? 'text-red-600' : 'text-emerald-600');
+    }
+  }
+
+  window.sendVisitorOtp = function() {
+    fetch('/api/v2/registration/start-otp', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({phone: document.getElementById('enroll-phone').value})
+    }).then(function(r) { return r.json().then(function(data) { return {ok: r.ok, data: data}; }); })
+      .then(function(result) {
+        if (!result.ok) throw new Error(result.data.error || 'Could not send OTP.');
+        enrollmentMessage(result.data.development_otp ? 'Development OTP: ' + result.data.development_otp : 'OTP sent. It expires in five minutes.');
+      }).catch(function(error) { enrollmentMessage(error.message, true); });
+  };
+
+  window.verifyVisitorOtp = function() {
+    fetch('/api/v2/registration/verify-otp', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({phone: document.getElementById('enroll-phone').value, otp: document.getElementById('enroll-otp').value})
+    }).then(function(r) { return r.json().then(function(data) { return {ok: r.ok, data: data}; }); })
+      .then(function(result) {
+        if (!result.ok) throw new Error(result.data.error || 'OTP verification failed.');
+        visitorPhoneVerified = true;
+        document.getElementById('enrollment-status').textContent = 'Phone verified • last 4: ' + result.data.phone_last4;
+        document.getElementById('enrollment-status').className = 'text-xs text-emerald-600';
+        enrollmentMessage('Phone verified. Complete the form and register.');
+      }).catch(function(error) { enrollmentMessage(error.message, true); });
+  };
+
+  var enrollmentForm = document.getElementById('visitor-enrollment-form');
+  if (enrollmentForm) enrollmentForm.addEventListener('submit', function(event) {
+    event.preventDefault();
+    if (!visitorPhoneVerified) { enrollmentMessage('Verify the phone number before registering.', true); return; }
+    fetch('/api/v2/registration/visitors', {method: 'POST', body: new FormData(enrollmentForm)})
+      .then(function(r) { return r.json().then(function(data) { return {ok: r.ok, data: data}; }); })
+      .then(function(result) {
+        if (!result.ok) throw new Error(result.data.error || 'Registration failed.');
+        enrollmentMessage('Registered ' + result.data.visitor.visitor_code + '. Future matches can use Re-ID and the enrolled vehicle number.');
+        enrollmentForm.reset(); visitorPhoneVerified = false;
+        document.getElementById('enrollment-status').textContent = 'Phone not verified';
+        loadVisitorsData();
+      }).catch(function(error) { enrollmentMessage(error.message, true); });
+  });
 
   window.filterVisitorCategory = function(cat) {
     currentCatFilter = cat;

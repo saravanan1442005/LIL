@@ -22,6 +22,13 @@ DEFAULT_CONFIG = {
         "frame_width": 640,
         "frame_height": 480,
     },
+    "anpr_settings": {
+        "enabled": False,
+        "model_path": "",
+        "detector_threshold": 0.35,
+        "minimum_consensus_frames": 2,
+        "roi": None,
+    },
     "ui_settings": {
         "grid_columns": 2,
         "show_bounding_boxes": True,

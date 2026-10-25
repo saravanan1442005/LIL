@@ -12,6 +12,7 @@ from database.models import Alert
 from services.auth_service import jwt_required, roles_required
 from services.event_service import subscribe_alerts, unsubscribe_alerts
 from services.audit_service import log_audit_event
+from api.pagination import parse_pagination
 
 alerts_bp = Blueprint("alerts", __name__, url_prefix="/api/v2/alerts")
 
@@ -24,8 +25,11 @@ def list_alerts():
 
         status = request.args.get("status")
         severity = request.args.get("severity")
-        limit = min(int(request.args.get("limit", 50)), 200)
-        offset = int(request.args.get("offset", 0))
+        limit, offset, pagination_error = parse_pagination(
+            request.args.get("limit"), request.args.get("offset")
+        )
+        if pagination_error:
+            return jsonify({"error": pagination_error}), 400
 
         if status:
             query = query.filter(Alert.status == status)

@@ -192,6 +192,16 @@ class Visitor(Base):
     category = Column(String(50), nullable=False, default="Unknown")            # Delivery, Technician, Vendor, Domestic Worker, Guest, Unknown
     label = Column(String(100), nullable=True)                                  # e.g. "Amazon Courier", "Ramesh - Electrician"
     notes = Column(Text, nullable=True)
+    full_name = Column(String(150), nullable=True)
+    phone_hash = Column(String(128), nullable=True, index=True)
+    phone_last4 = Column(String(4), nullable=True, index=True)
+    phone_verified = Column(Boolean, default=False, nullable=False)
+    company = Column(String(150), nullable=True)
+    vehicle_number = Column(String(32), nullable=True, index=True)
+    profile_photo_path = Column(String(500), nullable=True)
+    face_enrolled = Column(Boolean, default=False, nullable=False)
+    plate_enrolled = Column(Boolean, default=False, nullable=False)
+    consent_status = Column(String(30), default="NOT_REQUIRED", nullable=False)
     first_seen = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     last_seen = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
     total_visits = Column(Integer, default=1, nullable=False)
@@ -212,6 +222,15 @@ class Visitor(Base):
             "category": self.category,
             "label": self.label,
             "notes": self.notes,
+            "full_name": self.full_name,
+            "phone_last4": self.phone_last4,
+            "phone_verified": self.phone_verified,
+            "company": self.company,
+            "vehicle_number": self.vehicle_number,
+            "profile_photo_path": self.profile_photo_path,
+            "face_enrolled": self.face_enrolled,
+            "plate_enrolled": self.plate_enrolled,
+            "consent_status": self.consent_status,
             "first_seen": self.first_seen.isoformat() if self.first_seen else None,
             "last_seen": self.last_seen.isoformat() if self.last_seen else None,
             "total_visits": self.total_visits,
@@ -264,6 +283,51 @@ class FaceEnrollment(Base):
 
     visitor = relationship("Visitor", back_populates="face_enrollment")
     consent = relationship("Consent")
+
+
+class OTPChallenge(Base):
+    __tablename__ = "otp_challenges"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    phone_hash = Column(String(128), nullable=False, index=True)
+    otp_hash = Column(String(128), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    attempts = Column(Integer, default=0, nullable=False)
+    verified_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class VisitorEntry(Base):
+    __tablename__ = "visitor_entries"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    visitor_id = Column(Integer, ForeignKey("visitors.id", ondelete="SET NULL"), nullable=True, index=True)
+    camera_id = Column(Integer, ForeignKey("cameras.id", ondelete="SET NULL"), nullable=True)
+    event_type = Column(String(20), nullable=False, default="ENTRY")
+    source = Column(String(30), nullable=False)  # FACE, PLATE, REID, PHONE, MANUAL
+    confidence = Column(Float, nullable=True)
+    guard_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    confirmed = Column(Boolean, default=False, nullable=False)
+    snapshot_path = Column(String(500), nullable=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+
+    visitor = relationship("Visitor")
+
+
+class PlateRead(Base):
+    __tablename__ = "plate_reads"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    visitor_id = Column(Integer, ForeignKey("visitors.id", ondelete="SET NULL"), nullable=True, index=True)
+    camera_id = Column(Integer, ForeignKey("cameras.id", ondelete="SET NULL"), nullable=True)
+    raw_text = Column(String(64), nullable=False)
+    normalized_text = Column(String(32), nullable=False, index=True)
+    detector_confidence = Column(Float, nullable=False)
+    ocr_confidence = Column(Float, nullable=False)
+    quality = Column(Float, nullable=False, default=0.0)
+    crop_path = Column(String(500), nullable=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    status = Column(String(30), default="PENDING", nullable=False)
 
 
 # ---------------------------------------------------------------------------

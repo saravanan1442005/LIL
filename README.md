@@ -32,6 +32,22 @@ During security incidents or audits, manually reviewing hours of footage across 
 * **Search & Forensic Incident Timelines:** Filter by date, camera, visitor category, object, and natural language query (*"delivery person with a box near Gate 2 yesterday evening"*). One-click timeline reconstruction exported as PDF or JSON.
 * **Privacy by Design:** Default face/body blurring for standard Viewer roles, optional consented face recognition (disabled by default), configurable retention auto-purge, and immutable audit logs compliant with India's **Digital Personal Data Protection (DPDP) Act 2023**.
 
+### Guard-led visitor enrollment
+
+Security Officers and Admins can enroll a first-time visitor from the Visitors screen:
+
+1. Enter the phone number and verify the six-digit OTP.
+2. Capture the visitor name, vehicle number, company, category, and photo.
+3. Record whether the visitor consented to face enrollment.
+4. Search returning visitors by the last four phone digits or vehicle/name.
+5. Confirm an entry with an auditable source (`MANUAL`, `PHONE`, `REID`, `FACE`, or `PLATE`).
+
+The local development OTP provider returns the OTP in the API response and logs it server-side. Configure a real SMS provider before production. The current photo enrollment creates an appearance Re-ID embedding; facial recognition remains consent-gated and requires a face embedding provider before `face_enrolled` can be enabled.
+
+### Adaptive ANPR
+
+ANPR is exposed through `POST /api/v2/registration/anpr/read` and accepts a high-resolution frame plus an optional per-camera ROI (`x1,y1,x2,y2`). It uses a configured plate detector (`ANPR_MODEL_PATH`) and optional Tesseract OCR, enhances several lighting variants, validates Indian-style plate formats, and requires multi-frame consensus before a production admission decision. A missing model or OCR engine is reported as unavailable; it is never treated as a successful read. Different gates should store their own ROI, detector threshold, and camera profile rather than sharing one crop.
+
 ### Legacy Module: Cleanliness & Waste Disposal Monitoring
 
 The original public cleanliness and littering violation detection engine (`detector.py`, `rule_engine.py`, `tracker.py`, and `/api/violations`) is preserved in its entirety and accessible under the **"Legacy / Cleanliness Monitoring"** navigation tab.
