@@ -131,6 +131,7 @@ def _ensure_visitor_columns(conn):
     existing = {column["name"] for column in inspector.get_columns("visitors")}
     columns = {
         "full_name": "VARCHAR(150)",
+        "phone_number": "VARCHAR(20)",
         "phone_hash": "VARCHAR(128)",
         "phone_last4": "VARCHAR(4)",
         "phone_verified": "BOOLEAN NOT NULL DEFAULT 0",

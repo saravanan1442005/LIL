@@ -581,6 +581,16 @@
   <!-- 5. JAVASCRIPT CONTROLLER -->
   <!-- ========================================================================= -->
   <script>
+    (function () {
+      fetch('/api/v2/auth/me', { credentials: 'same-origin' })
+        .then(function (response) {
+          if (response.status === 401) {
+            window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname + window.location.hash);
+          }
+        })
+        .catch(function () {});
+    }());
+
     // State management
     let appState = {
       ai_enabled: true,

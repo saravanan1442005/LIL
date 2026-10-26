@@ -8,7 +8,8 @@ from database.connection import get_session_factory
 from database.models import Visitor
 from services.auth_service import jwt_required, roles_required
 from services.visitor_service import (
-    get_visitor_details, merge_visitor_profiles, purge_visitor_data
+    get_visitor_details, is_visitor_present, link_event_to_visitor,
+    merge_visitor_profiles, purge_visitor_data
 )
 from services.audit_service import log_audit_event
 from api.pagination import parse_pagination
@@ -17,6 +18,7 @@ visitors_bp = Blueprint("visitors", __name__, url_prefix="/api/v2/visitors")
 
 
 @visitors_bp.route("", methods=["GET"])
+@roles_required("Admin", "Security Officer", "Viewer", "Auditor")
 def list_visitors():
     session: Session = get_session_factory()()
     try:
@@ -36,7 +38,11 @@ def list_visitors():
             query = query.filter(
                 (Visitor.visitor_code.ilike(f"%{q}%")) |
                 (Visitor.label.ilike(f"%{q}%")) |
-                (Visitor.notes.ilike(f"%{q}%"))
+                (Visitor.notes.ilike(f"%{q}%")) |
+                (Visitor.phone_last4 == q) |
+                (Visitor.full_name.ilike(f"%{q}%")) |
+                (Visitor.company.ilike(f"%{q}%")) |
+                (Visitor.vehicle_number.ilike(f"%{q}%"))
             )
 
         total = query.count()
@@ -46,13 +52,17 @@ def list_visitors():
             "total": total,
             "limit": limit,
             "offset": offset,
-            "visitors": [v.to_dict() for v in visitors]
+            "visitors": [
+                v.to_dict() | {"is_present": is_visitor_present(session, v.id)}
+                for v in visitors
+            ]
         })
     finally:
         session.close()
 
 
 @visitors_bp.route("/<int:visitor_id>", methods=["GET"])
+@roles_required("Admin", "Security Officer", "Viewer", "Auditor")
 def get_visitor(visitor_id: int):
     session: Session = get_session_factory()()
     try:
@@ -60,6 +70,31 @@ def get_visitor(visitor_id: int):
         if not details:
             return jsonify({"error": "Visitor not found."}), 404
         return jsonify({"visitor": details})
+    finally:
+        session.close()
+
+
+@visitors_bp.route("/<int:visitor_id>/violations", methods=["POST"])
+@roles_required("Admin", "Security Officer")
+def link_visitor_violation(visitor_id: int):
+    """Link an existing violation event after an officer verifies its identity."""
+    data = request.get_json(silent=True) or {}
+    event_id = data.get("event_id")
+    if not event_id:
+        return jsonify({"error": "event_id is required."}), 400
+
+    session: Session = get_session_factory()()
+    try:
+        try:
+            event = link_event_to_visitor(
+                session,
+                int(event_id),
+                visitor_id,
+                str(data.get("reason", "Manual visitor attribution")).strip(),
+            )
+        except (LookupError, ValueError) as error:
+            return jsonify({"error": str(error)}), 400
+        return jsonify({"event": event.to_dict(), "visitor_id": visitor_id}), 200
     finally:
         session.close()
 

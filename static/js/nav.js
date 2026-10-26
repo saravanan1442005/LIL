@@ -53,7 +53,19 @@
     if (isLegacy) return;
     appView.innerHTML = '<p class="text-sm text-slate-500 p-4">Loading…</p>';
     loadPartial(view)
-      .then(function (html) { appView.innerHTML = html; })
+      .then(function (html) {
+        appView.innerHTML = html;
+        // Scripts inside fetched partials do not execute through innerHTML.
+        // Recreate them after insertion so each view can initialize its controls.
+        Array.prototype.forEach.call(appView.querySelectorAll('script'), function (script) {
+          var replacement = document.createElement('script');
+          Array.prototype.forEach.call(script.attributes, function (attribute) {
+            replacement.setAttribute(attribute.name, attribute.value);
+          });
+          replacement.textContent = script.textContent;
+          script.parentNode.replaceChild(replacement, script);
+        });
+      })
       .catch(function () {
         appView.innerHTML = '<p class="text-sm text-red-600 p-4">Could not load this page.</p>';
       });

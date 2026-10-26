@@ -193,6 +193,7 @@ class Visitor(Base):
     label = Column(String(100), nullable=True)                                  # e.g. "Amazon Courier", "Ramesh - Electrician"
     notes = Column(Text, nullable=True)
     full_name = Column(String(150), nullable=True)
+    phone_number = Column(String(20), nullable=True, index=True)
     phone_hash = Column(String(128), nullable=True, index=True)
     phone_last4 = Column(String(4), nullable=True, index=True)
     phone_verified = Column(Boolean, default=False, nullable=False)
@@ -223,6 +224,7 @@ class Visitor(Base):
             "label": self.label,
             "notes": self.notes,
             "full_name": self.full_name,
+            "phone_number": self.phone_number,
             "phone_last4": self.phone_last4,
             "phone_verified": self.phone_verified,
             "company": self.company,

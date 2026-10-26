@@ -62,8 +62,11 @@ def create_app_engine(max_retries: int = 3, retry_delay: float = 1.5):
         engine_kwargs["pool_recycle"] = 300
         engine_kwargs["pool_size"] = 10
         engine_kwargs["max_overflow"] = 20
-        # Connect timeout for Neon pooler
-        engine_kwargs["connect_args"] = {"connect_timeout": 15}
+        # Connect timeout and disable server-side prepared statements for Supabase/Neon connection poolers
+        engine_kwargs["connect_args"] = {
+            "connect_timeout": 15,
+            "prepare_threshold": None,
+        }
     else:
         # SQLite compatibility flags
         engine_kwargs["connect_args"] = {"check_same_thread": False}

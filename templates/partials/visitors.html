@@ -15,19 +15,12 @@
       <div class="flex items-start justify-between gap-4">
         <div>
           <h3 class="font-display font-bold text-lg text-slate-900 dark:text-white">Guard-led visitor enrollment</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Verify the phone, capture the visitor details, then confirm each entry from a candidate match.</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Store the phone number, capture the visitor details, then confirm each entry from a candidate match.</p>
         </div>
-        <span id="enrollment-status" class="text-xs text-slate-500">Phone not verified</span>
+        <span id="enrollment-status" class="text-xs text-slate-500">Phone stored with profile</span>
       </div>
       <form id="visitor-enrollment-form" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4 text-xs" enctype="multipart/form-data">
-        <div class="md:col-span-2 flex gap-2">
-          <input id="enroll-phone" name="phone" required inputmode="tel" placeholder="Phone number" class="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
-          <button type="button" onclick="sendVisitorOtp()" class="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold">Send OTP</button>
-        </div>
-        <div class="flex gap-2">
-          <input id="enroll-otp" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" class="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
-          <button type="button" onclick="verifyVisitorOtp()" class="px-4 py-2 rounded-xl bg-brand-600 text-white font-bold">Verify</button>
-        </div>
+        <input id="enroll-phone" name="phone" required inputmode="tel" placeholder="Phone number" class="md:col-span-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
         <input name="full_name" required placeholder="Full name" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
         <input name="vehicle_number" placeholder="Bike / vehicle number" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
         <input name="company" placeholder="Company" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
@@ -43,7 +36,7 @@
 
     <!-- Category Filter Strip & Search Bar -->
     <div class="flex items-center gap-2 flex-wrap">
-      <input id="visitor-search-input" type="text" placeholder="Search visitor code or label..." onkeyup="if(event.key==='Enter') loadVisitorsData()" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-100 w-56">
+      <input id="visitor-search-input" type="text" placeholder="Search code, name, or phone last 4..." onkeyup="if(event.key==='Enter') loadVisitorsData()" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-100 w-56">
       <button onclick="loadVisitorsData()" class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs cursor-pointer">
         Search
       </button>
@@ -67,8 +60,11 @@
         <thead>
           <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
             <th class="p-3.5">Visitor Code</th>
+            <th class="p-3.5">Name</th>
+            <th class="p-3.5">Mobile</th>
             <th class="p-3.5">Category</th>
             <th class="p-3.5">Assigned Label / Notes</th>
+            <th class="p-3.5">Presence</th>
             <th class="p-3.5">Total Visits</th>
             <th class="p-3.5">First Seen</th>
             <th class="p-3.5">Last Seen</th>
@@ -76,7 +72,7 @@
           </tr>
         </thead>
         <tbody id="visitors-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
-          <tr><td colspan="7" class="p-8 text-center text-slate-400">Loading visitor directory...</td></tr>
+          <tr><td colspan="10" class="p-8 text-center text-slate-400">Loading visitor directory...</td></tr>
         </tbody>
       </table>
     </div>
@@ -120,9 +116,19 @@
 </section>
 
 <script>
-  var currentCatFilter = 'ALL';
-  var visitorPhoneVerified = false;
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function(character) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[character];
+    });
+  }
 
+  var currentCatFilter = 'ALL';
   function enrollmentMessage(text, error) {
     var el = document.getElementById('enrollment-message');
     if (el) {
@@ -131,42 +137,21 @@
     }
   }
 
-  window.sendVisitorOtp = function() {
-    fetch('/api/v2/registration/start-otp', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({phone: document.getElementById('enroll-phone').value})
-    }).then(function(r) { return r.json().then(function(data) { return {ok: r.ok, data: data}; }); })
-      .then(function(result) {
-        if (!result.ok) throw new Error(result.data.error || 'Could not send OTP.');
-        enrollmentMessage(result.data.development_otp ? 'Development OTP: ' + result.data.development_otp : 'OTP sent. It expires in five minutes.');
-      }).catch(function(error) { enrollmentMessage(error.message, true); });
-  };
-
-  window.verifyVisitorOtp = function() {
-    fetch('/api/v2/registration/verify-otp', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({phone: document.getElementById('enroll-phone').value, otp: document.getElementById('enroll-otp').value})
-    }).then(function(r) { return r.json().then(function(data) { return {ok: r.ok, data: data}; }); })
-      .then(function(result) {
-        if (!result.ok) throw new Error(result.data.error || 'OTP verification failed.');
-        visitorPhoneVerified = true;
-        document.getElementById('enrollment-status').textContent = 'Phone verified • last 4: ' + result.data.phone_last4;
-        document.getElementById('enrollment-status').className = 'text-xs text-emerald-600';
-        enrollmentMessage('Phone verified. Complete the form and register.');
-      }).catch(function(error) { enrollmentMessage(error.message, true); });
-  };
-
   var enrollmentForm = document.getElementById('visitor-enrollment-form');
   if (enrollmentForm) enrollmentForm.addEventListener('submit', function(event) {
     event.preventDefault();
-    if (!visitorPhoneVerified) { enrollmentMessage('Verify the phone number before registering.', true); return; }
-    fetch('/api/v2/registration/visitors', {method: 'POST', body: new FormData(enrollmentForm)})
+    var token = localStorage.getItem('auth_token');
+    fetch('/api/v2/registration/visitors', {
+      method: 'POST',
+      headers: token ? {'Authorization': 'Bearer ' + token} : {},
+      body: new FormData(enrollmentForm)
+    })
       .then(function(r) { return r.json().then(function(data) { return {ok: r.ok, data: data}; }); })
       .then(function(result) {
         if (!result.ok) throw new Error(result.data.error || 'Registration failed.');
         enrollmentMessage('Registered ' + result.data.visitor.visitor_code + '. Future matches can use Re-ID and the enrolled vehicle number.');
-        enrollmentForm.reset(); visitorPhoneVerified = false;
-        document.getElementById('enrollment-status').textContent = 'Phone not verified';
+        enrollmentForm.reset();
+        document.getElementById('enrollment-status').textContent = 'Phone stored with profile';
         loadVisitorsData();
       }).catch(function(error) { enrollmentMessage(error.message, true); });
   });
@@ -189,19 +174,28 @@
   window.loadVisitorsData = function() {
     var tbody = document.getElementById('visitors-table-body');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400">Loading visitors...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-slate-400">Loading visitors...</td></tr>';
 
     var q = document.getElementById('visitor-search-input') ? document.getElementById('visitor-search-input').value.trim() : '';
     var url = '/api/v2/visitors?limit=100';
     if (currentCatFilter !== 'ALL') url += '&category=' + encodeURIComponent(currentCatFilter);
     if (q) url += '&q=' + encodeURIComponent(q);
 
-    fetch(url)
+    var token = localStorage.getItem('auth_token');
+    var headers = token ? {'Authorization': 'Bearer ' + token} : {};
+    fetch(url, {headers: headers})
       .then(function(r) { return r.json(); })
       .then(function(data) {
+        if (data.error) {
+          if (data.error.indexOf('Authentication required') !== -1) {
+            window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname + '#visitors');
+            return;
+          }
+          throw new Error(data.error);
+        }
         var list = data.visitors || [];
         if (list.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-400 italic">No visitors matched the current filter.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-slate-400 italic">No visitors matched the current filter.</td></tr>';
           return;
         }
 
@@ -218,12 +212,16 @@
 
           html += '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
             '<td class="p-3.5 font-mono font-bold text-slate-900 dark:text-white">' + escapeHtml(v.visitor_code) + '</td>' +
+            '<td class="p-3.5 font-semibold text-slate-800 dark:text-slate-200">' + escapeHtml(v.full_name || '—') + '</td>' +
+            '<td class="p-3.5 font-mono text-[11px] text-slate-600 dark:text-slate-300">' + escapeHtml(v.phone_number || v.phone_last4 || '—') + '</td>' +
             '<td class="p-3.5"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ' + badgeCls + '">' + escapeHtml(v.category) + '</span></td>' +
             '<td class="p-3.5 font-medium text-slate-700 dark:text-slate-300">' + escapeHtml(v.label || '—') + '</td>' +
+            '<td class="p-3.5"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ' + (v.is_present ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500') + '">' + (v.is_present ? 'Present' : 'Exited') + '</span></td>' +
             '<td class="p-3.5 font-bold text-slate-800 dark:text-slate-200">' + (v.total_visits || 1) + '</td>' +
             '<td class="p-3.5 font-mono text-[11px] text-slate-500">' + fs + '</td>' +
             '<td class="p-3.5 font-mono text-[11px] text-slate-500">' + ls + '</td>' +
             '<td class="p-3.5 text-right space-x-2">' +
+              (v.is_present ? '<button onclick="confirmVisitorExit(' + v.id + ', \'' + escapeHtml(v.visitor_code) + '\')" class="text-amber-600 hover:text-amber-700 font-bold cursor-pointer">Confirm exit</button>' : '') +
               '<button onclick="openEditVisitorModal(' + v.id + ', \'' + escapeHtml(v.visitor_code) + '\', \'' + escapeHtml(v.category) + '\', \'' + escapeHtml(v.label || '') + '\', \'' + escapeHtml(v.notes || '') + '\')" class="text-brand-600 hover:text-brand-700 font-bold cursor-pointer">Edit</button>' +
               '<button onclick="purgeVisitor(' + v.id + ', \'' + escapeHtml(v.visitor_code) + '\')" class="text-red-500 hover:text-red-700 font-semibold cursor-pointer" title="DPDP Right-to-be-Forgotten">Purge</button>' +
             '</td>' +
@@ -233,7 +231,7 @@
         tbody.innerHTML = html;
       })
       .catch(function(err) {
-        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-500">Failed to load visitors: ' + err.message + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-red-500">Failed to load visitors: ' + err.message + '</td></tr>';
       });
   };
 
@@ -261,7 +259,10 @@
 
     fetch('/api/v2/visitors/' + id, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign(
+        { 'Content-Type': 'application/json' },
+        localStorage.getItem('auth_token') ? {'Authorization': 'Bearer ' + localStorage.getItem('auth_token')} : {}
+      ),
       body: JSON.stringify(payload)
     })
     .then(function() {
@@ -272,8 +273,31 @@
 
   window.purgeVisitor = function(id, code) {
     if (!confirm('DPDP Act 2023 Compliance: Permanently purge all personal data and Re-ID embeddings for ' + code + '?')) return;
-    fetch('/api/v2/visitors/' + id + '/purge', { method: 'DELETE' })
+    fetch('/api/v2/visitors/' + id + '/purge', {
+      method: 'DELETE',
+      headers: localStorage.getItem('auth_token') ? {'Authorization': 'Bearer ' + localStorage.getItem('auth_token')} : {}
+    })
       .then(function() { loadVisitorsData(); });
+  };
+
+  window.confirmVisitorExit = function(id, code) {
+    if (!confirm('Confirm that ' + code + ' has exited the premises?')) return;
+    fetch('/api/v2/registration/exit', {
+      method: 'POST',
+      headers: Object.assign(
+        {'Content-Type': 'application/json'},
+        localStorage.getItem('auth_token') ? {'Authorization': 'Bearer ' + localStorage.getItem('auth_token')} : {}
+      ),
+      body: JSON.stringify({visitor_id: id, source: 'MANUAL'})
+    })
+      .then(function(r) {
+        return r.json().then(function(data) { return {ok: r.ok, data: data}; });
+      })
+      .then(function(result) {
+        if (!result.ok) throw new Error(result.data.error || 'Could not confirm exit.');
+        loadVisitorsData();
+      })
+      .catch(function(error) { enrollmentMessage(error.message, true); });
   };
 
   loadVisitorsData();

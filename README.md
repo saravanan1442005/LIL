@@ -36,17 +36,36 @@ During security incidents or audits, manually reviewing hours of footage across 
 
 Security Officers and Admins can enroll a first-time visitor from the Visitors screen:
 
-1. Enter the phone number and verify the six-digit OTP.
+1. Enter and store the visitor's phone number; authorized visitor-directory users can view the full number.
 2. Capture the visitor name, vehicle number, company, category, and photo.
 3. Record whether the visitor consented to face enrollment.
 4. Search returning visitors by the last four phone digits or vehicle/name.
 5. Confirm an entry with an auditable source (`MANUAL`, `PHONE`, `REID`, `FACE`, or `PLATE`).
 
-The local development OTP provider returns the OTP in the API response and logs it server-side. Configure a real SMS provider before production. The current photo enrollment creates an appearance Re-ID embedding; facial recognition remains consent-gated and requires a face embedding provider before `face_enrolled` can be enabled.
+The complete phone number is stored and returned to authorized visitor-directory users. The current photo enrollment creates an appearance Re-ID embedding; facial recognition remains consent-gated and requires a face embedding provider before `face_enrolled` can be enabled.
 
 ### Adaptive ANPR
 
 ANPR is exposed through `POST /api/v2/registration/anpr/read` and accepts a high-resolution frame plus an optional per-camera ROI (`x1,y1,x2,y2`). It uses a configured plate detector (`ANPR_MODEL_PATH`) and optional Tesseract OCR, enhances several lighting variants, validates Indian-style plate formats, and requires multi-frame consensus before a production admission decision. A missing model or OCR engine is reported as unavailable; it is never treated as a successful read. Different gates should store their own ROI, detector threshold, and camera profile rather than sharing one crop.
+
+### Visitor presence lifecycle
+
+The visitor module keeps profile identity separate from current presence. A confirmed entry or
+exit is written to `visitor_entries`; the latest confirmed gate event determines whether a
+visitor is currently present. Recognition and plate matches only return candidates and never
+change presence without guard confirmation.
+
+Guard endpoints:
+
+* `POST /api/v2/registration/entry` — confirm an entry with `FACE`, `PLATE`, `REID`, `PHONE`, or `MANUAL` source.
+* `POST /api/v2/registration/exit` — confirm a departure using the same approved sources.
+* `GET /api/v2/registration/active` — list visitors whose latest confirmed event is `ENTRY`.
+* `GET /api/v2/visitors/<id>` — return profile, current presence, recent gate events, and activity timeline.
+* `POST /api/v2/visitors/<id>/violations` — attach an existing violation event after officer verification; unverified recognition never creates an accusation.
+* `POST /api/v2/registration/retention/purge` — Admin-only purge of non-violator profiles older than the configured retention period (24 hours by default).
+
+Duplicate entries and exits are rejected, all confirmed gate actions are audit logged, and
+retention purge removes embeddings while preserving a redacted audit record.
 
 ### Legacy Module: Cleanliness & Waste Disposal Monitoring
 

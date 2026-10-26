@@ -1,11 +1,9 @@
 """Guard-led visitor enrollment, lookup, and confirmed entry logging."""
 
 import hashlib
-import hmac
 import os
-import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import Blueprint, current_app, g, jsonify, request, send_from_directory
@@ -13,16 +11,21 @@ from sqlalchemy.orm import Session
 from werkzeug.utils import secure_filename
 
 from database.connection import get_session_factory
-from database.models import OTPChallenge, Visitor, VisitorEntry
+from database.models import Visitor, VisitorEntry
 from services.audit_service import log_audit_event
 from services.auth_service import roles_required
 from services.reid_service import get_reid_extractor
 from services.vector_store import get_vector_store
+from services.visitor_service import (
+    generate_visitor_code,
+    get_visitor_details,
+    is_visitor_present,
+    purge_expired_non_violators,
+    record_gate_event,
+)
 from services.anpr_service import ANPRService, aggregate_plate_reads
 
 registration_bp = Blueprint("registration", __name__, url_prefix="/api/v2/registration")
-OTP_TTL_MINUTES = 5
-MAX_OTP_ATTEMPTS = 5
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 _anpr_service = None
 
@@ -34,25 +37,6 @@ def _phone_hash(phone: str) -> str:
 
 def _normalize_phone(phone: str) -> str:
     return "".join(ch for ch in phone if ch.isdigit())
-
-
-def _otp_hash(otp: str) -> str:
-    secret = os.getenv("JWT_SECRET", "ecolifybuddy-development-secret")
-    return hmac.new(secret.encode("utf-8"), otp.encode("utf-8"), hashlib.sha256).hexdigest()
-
-
-def _utc(value: datetime) -> datetime:
-    """Normalize SQLite's naive timestamps and Postgres aware timestamps."""
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
-
-
-def _send_otp(phone: str, otp: str) -> None:
-    """Use a configured provider later; development mode logs instead of sending."""
-    if os.getenv("OTP_PROVIDER", "console").lower() != "console":
-        raise RuntimeError("OTP provider is configured but no provider adapter is installed.")
-    current_app.logger.info("Development OTP for phone ending %s: %s", phone[-4:], otp)
 
 
 def _get_anpr_service() -> ANPRService:
@@ -128,70 +112,6 @@ def read_plate():
     return jsonify(result)
 
 
-@registration_bp.route("/start-otp", methods=["POST"])
-@roles_required("Admin", "Security Officer")
-def start_otp():
-    data = request.get_json(silent=True) or {}
-    phone = _normalize_phone(str(data.get("phone", "")))
-    if len(phone) < 10:
-        return jsonify({"error": "Enter a valid phone number."}), 400
-
-    otp = f"{secrets.randbelow(1_000_000):06d}"
-    session: Session = get_session_factory()()
-    try:
-        challenge = OTPChallenge(
-            phone_hash=_phone_hash(phone),
-            otp_hash=_otp_hash(otp),
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=OTP_TTL_MINUTES),
-        )
-        session.add(challenge)
-        session.commit()
-        _send_otp(phone, otp)
-        response = {
-            "message": "OTP sent.",
-            "expires_in_seconds": OTP_TTL_MINUTES * 60,
-            "phone_last4": phone[-4:],
-        }
-        if os.getenv("OTP_PROVIDER", "console").lower() == "console":
-            response["development_otp"] = otp
-        return jsonify(response), 201
-    finally:
-        session.close()
-
-
-@registration_bp.route("/verify-otp", methods=["POST"])
-@roles_required("Admin", "Security Officer")
-def verify_otp():
-    data = request.get_json(silent=True) or {}
-    phone = _normalize_phone(str(data.get("phone", "")))
-    otp = str(data.get("otp", "")).strip()
-    if len(phone) < 10 or len(otp) != 6 or not otp.isdigit():
-        return jsonify({"error": "Phone number and six-digit OTP are required."}), 400
-
-    session: Session = get_session_factory()()
-    try:
-        challenge = (
-            session.query(OTPChallenge)
-            .filter(OTPChallenge.phone_hash == _phone_hash(phone), OTPChallenge.verified_at.is_(None))
-            .order_by(OTPChallenge.created_at.desc())
-            .first()
-        )
-        now = datetime.now(timezone.utc)
-        if not challenge or _utc(challenge.expires_at) < now:
-            return jsonify({"error": "OTP is missing or expired."}), 400
-        if challenge.attempts >= MAX_OTP_ATTEMPTS:
-            return jsonify({"error": "Too many OTP attempts. Request a new OTP."}), 429
-        challenge.attempts += 1
-        if not hmac.compare_digest(challenge.otp_hash, _otp_hash(otp)):
-            session.commit()
-            return jsonify({"error": "Invalid OTP.", "attempts_remaining": MAX_OTP_ATTEMPTS - challenge.attempts}), 400
-        challenge.verified_at = now
-        session.commit()
-        return jsonify({"verified": True, "phone_last4": phone[-4:]})
-    finally:
-        session.close()
-
-
 @registration_bp.route("/visitors", methods=["POST"])
 @roles_required("Admin", "Security Officer")
 def register_visitor():
@@ -205,28 +125,17 @@ def register_visitor():
 
     session: Session = get_session_factory()()
     try:
-        verified = (
-            session.query(OTPChallenge)
-            .filter(
-                OTPChallenge.phone_hash == phone_hash,
-                OTPChallenge.verified_at.is_not(None),
-                OTPChallenge.verified_at >= datetime.now(timezone.utc) - timedelta(minutes=15),
-            )
-            .order_by(OTPChallenge.verified_at.desc())
-            .first()
-        )
-        if not verified:
-            return jsonify({"error": "Verify the phone number with OTP before registration."}), 400
         existing = session.query(Visitor).filter(Visitor.phone_hash == phone_hash, Visitor.status != "REDACTED").first()
         if existing:
             return jsonify({"error": "A visitor with this phone number already exists.", "visitor": existing.to_dict()}), 409
 
         visitor = Visitor(
-            visitor_code=f"VIS-{10001 + session.query(Visitor).count()}",
+            visitor_code=generate_visitor_code(session),
             full_name=data.get("full_name", "").strip(),
+            phone_number=phone,
             phone_hash=phone_hash,
             phone_last4=phone[-4:],
-            phone_verified=True,
+            phone_verified=False,
             company=(data.get("company") or "").strip() or None,
             vehicle_number=(data.get("vehicle_number") or "").strip().upper() or None,
             plate_enrolled=bool((data.get("vehicle_number") or "").strip()),
@@ -366,20 +275,83 @@ def confirm_entry():
         visitor = session.query(Visitor).filter(Visitor.id == int(visitor_id), Visitor.status == "ACTIVE").first()
         if not visitor:
             return jsonify({"error": "Active visitor not found."}), 404
-        entry = VisitorEntry(
-            visitor_id=visitor.id,
-            camera_id=data.get("camera_id"),
-            source=source,
-            confidence=data.get("confidence"),
-            guard_user_id=g.current_user.get("user_id"),
-            confirmed=True,
-            snapshot_path=data.get("snapshot_path"),
-        )
-        visitor.last_seen = datetime.now(timezone.utc)
-        visitor.total_visits = (visitor.total_visits or 0) + 1
-        session.add(entry)
-        session.commit()
+        try:
+            entry = record_gate_event(
+                session,
+                visitor.id,
+                "ENTRY",
+                source,
+                camera_id=data.get("camera_id"),
+                confidence=data.get("confidence"),
+                snapshot_path=data.get("snapshot_path"),
+                user_id=g.current_user.get("user_id"),
+            )
+        except (LookupError, ValueError) as error:
+            return jsonify({"error": str(error)}), 409
         log_audit_event(session, "CONFIRM_VISITOR_ENTRY", "Visitor", str(visitor.id), details={"source": source, "entry_id": entry.id})
         return jsonify({"entry_id": entry.id, "visitor": visitor.to_dict()}), 201
+    finally:
+        session.close()
+
+
+@registration_bp.route("/exit", methods=["POST"])
+@roles_required("Admin", "Security Officer")
+def confirm_exit():
+    """Confirm a visitor's departure; recognition alone never locks or clears access."""
+    data = request.get_json(silent=True) or {}
+    visitor_id = data.get("visitor_id")
+    source = str(data.get("source", "MANUAL")).upper()
+    if not visitor_id:
+        return jsonify({"error": "visitor_id is required."}), 400
+    session: Session = get_session_factory()()
+    try:
+        try:
+            exit_event = record_gate_event(
+                session,
+                int(visitor_id),
+                "EXIT",
+                source,
+                camera_id=data.get("camera_id"),
+                confidence=data.get("confidence"),
+                snapshot_path=data.get("snapshot_path"),
+                user_id=g.current_user.get("user_id"),
+            )
+        except (LookupError, ValueError) as error:
+            return jsonify({"error": str(error)}), 409
+        log_audit_event(session, "CONFIRM_VISITOR_EXIT", "Visitor", str(visitor_id), details={"source": source, "exit_id": exit_event.id})
+        visitor = session.query(Visitor).filter(Visitor.id == int(visitor_id)).first()
+        return jsonify({"exit_id": exit_event.id, "visitor": visitor.to_dict()}), 201
+    finally:
+        session.close()
+
+
+@registration_bp.route("/active", methods=["GET"])
+@roles_required("Admin", "Security Officer", "Viewer")
+def active_visitors():
+    session: Session = get_session_factory()()
+    try:
+        visitors = session.query(Visitor).filter(Visitor.status == "ACTIVE").order_by(Visitor.last_seen.desc()).all()
+        return jsonify({"visitors": [
+            visitor.to_dict() | {"is_present": is_visitor_present(session, visitor.id)}
+            for visitor in visitors if is_visitor_present(session, visitor.id)
+        ]})
+    finally:
+        session.close()
+
+
+@registration_bp.route("/retention/purge", methods=["POST"])
+@roles_required("Admin")
+def purge_retention():
+    data = request.get_json(silent=True) or {}
+    try:
+        retention_hours = int(data.get("retention_hours", 24))
+    except (TypeError, ValueError):
+        return jsonify({"error": "retention_hours must be an integer."}), 400
+    if retention_hours < 1 or retention_hours > 24 * 365:
+        return jsonify({"error": "retention_hours must be between 1 and 8760."}), 400
+    session: Session = get_session_factory()()
+    try:
+        count = purge_expired_non_violators(session, retention_hours)
+        return jsonify({"purged": count, "retention_hours": retention_hours})
     finally:
         session.close()

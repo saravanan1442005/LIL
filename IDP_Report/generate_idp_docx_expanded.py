@@ -10,6 +10,7 @@ all UML diagrams, tables, code listings, and business pitch models.
 import os
 import docx
 from docx import Document
+from report_appendix import append_current_implementation_status
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
@@ -1689,6 +1690,7 @@ def create_document():
 
     try:
         doc.save(DOCX_OUTPUT)
+        append_current_implementation_status(DOCX_OUTPUT)
         print("Expanded DOCX build complete:", DOCX_OUTPUT)
     except PermissionError:
         print(f"Warning: {DOCX_OUTPUT} was locked by Word. Skipping.")
@@ -1696,6 +1698,7 @@ def create_document():
     v2_path = DOCX_OUTPUT.replace(".docx", "_v2.docx")
     try:
         doc.save(v2_path)
+        append_current_implementation_status(v2_path)
         print("Saved successfully to:", v2_path)
     except PermissionError:
         print(f"Warning: {v2_path} was also locked.")

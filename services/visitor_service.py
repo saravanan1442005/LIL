@@ -7,7 +7,7 @@ import datetime
 import logging
 from typing import Optional, Tuple, List, Dict, Any
 from sqlalchemy.orm import Session
-from database.models import Visitor, VisitorEmbedding, Event, Track, AuditLog
+from database.models import Visitor, VisitorEmbedding, VisitorEntry, Event, Track, AuditLog
 from services.reid_service import get_reid_extractor
 from services.vector_store import get_vector_store
 from services.audit_service import log_audit_event
@@ -19,8 +19,76 @@ DEFAULT_SIMILARITY_THRESHOLD = 0.68
 
 def generate_visitor_code(session: Session) -> str:
     """Generate sequential unique visitor identifier, e.g. VIS-10042."""
-    count = session.query(Visitor).count()
-    return f"VIS-{10001 + count}"
+    latest = (
+        session.query(Visitor.visitor_code)
+        .filter(Visitor.visitor_code.like("VIS-%"))
+        .order_by(Visitor.id.desc())
+        .first()
+    )
+    try:
+        next_number = int(latest[0].split("-", 1)[1]) + 1 if latest else 10001
+    except (ValueError, AttributeError):
+        next_number = 10001 + session.query(Visitor).count()
+    return f"VIS-{next_number}"
+
+
+def is_visitor_present(session: Session, visitor_id: int) -> bool:
+    """Return whether the visitor's latest confirmed gate record is an entry."""
+    latest = (
+        session.query(VisitorEntry)
+        .filter(VisitorEntry.visitor_id == visitor_id, VisitorEntry.confirmed.is_(True))
+        .order_by(VisitorEntry.timestamp.desc(), VisitorEntry.id.desc())
+        .first()
+    )
+    return bool(latest and latest.event_type == "ENTRY")
+
+
+def record_gate_event(
+    session: Session,
+    visitor_id: int,
+    event_type: str,
+    source: str,
+    camera_id: Optional[int] = None,
+    confidence: Optional[float] = None,
+    snapshot_path: Optional[str] = None,
+    user_id: Optional[int] = None,
+) -> VisitorEntry:
+    """Persist a confirmed entry/exit event and update the visitor's presence."""
+    event_type = event_type.upper()
+    source = source.upper()
+    if event_type not in {"ENTRY", "EXIT"}:
+        raise ValueError("event_type must be ENTRY or EXIT")
+    if source not in {"FACE", "PLATE", "REID", "PHONE", "MANUAL"}:
+        raise ValueError("Invalid gate event source")
+
+    visitor = session.query(Visitor).filter(
+        Visitor.id == visitor_id, Visitor.status == "ACTIVE"
+    ).first()
+    if not visitor:
+        raise LookupError("Active visitor not found.")
+
+    present = is_visitor_present(session, visitor_id)
+    if event_type == "ENTRY" and present:
+        raise ValueError("Visitor is already marked as present.")
+    if event_type == "EXIT" and not present:
+        raise ValueError("Visitor is not currently marked as present.")
+
+    entry = VisitorEntry(
+        visitor_id=visitor.id,
+        camera_id=camera_id,
+        event_type=event_type,
+        source=source,
+        confidence=confidence,
+        guard_user_id=user_id,
+        confirmed=True,
+        snapshot_path=snapshot_path,
+    )
+    visitor.last_seen = datetime.datetime.now(datetime.timezone.utc)
+    if event_type == "ENTRY":
+        visitor.total_visits = (visitor.total_visits or 0) + 1
+    session.add(entry)
+    session.commit()
+    return entry
 
 
 def match_or_create_visitor(
@@ -48,7 +116,6 @@ def match_or_create_visitor(
         if visitor:
             # Update returning visitor
             visitor.last_seen = now
-            visitor.total_visits = (visitor.total_visits or 0) + 1
 
             # Auto-suggest category if still unknown and carrying package/backpack
             if visitor.category == "Unknown" and carried_objects:
@@ -90,6 +157,40 @@ def match_or_create_visitor(
     return new_visitor, True, 1.0
 
 
+def link_event_to_visitor(
+    session: Session,
+    event_id: int,
+    visitor_id: int,
+    reason: str = "Manual visitor attribution",
+) -> Event:
+    """Attach an existing camera event to a visitor after human verification."""
+    event = session.query(Event).filter(Event.id == event_id).first()
+    visitor = session.query(Visitor).filter(
+        Visitor.id == visitor_id, Visitor.status == "ACTIVE"
+    ).first()
+    if not event:
+        raise LookupError("Event not found.")
+    if not visitor:
+        raise LookupError("Active visitor not found.")
+    if event.event_type not in {"VIOLATION", "LITTERING", "OBJECT_LEFT_BEHIND"}:
+        raise ValueError("Only violation events can be linked to a visitor.")
+
+    event.visitor_id = visitor.id
+    details = dict(event.details or {})
+    details["visitor_attribution"] = "human_verified"
+    event.details = details
+    session.commit()
+    log_audit_event(
+        session,
+        "LINK_VISITOR_VIOLATION",
+        "Event",
+        str(event.id),
+        reason=reason,
+        details={"visitor_id": visitor.id},
+    )
+    return event
+
+
 def get_visitor_details(session: Session, visitor_id: int) -> Optional[Dict[str, Any]]:
     """Retrieve full visitor profile with aggregated statistics and timeline events."""
     visitor = session.query(Visitor).filter(Visitor.id == visitor_id).first()
@@ -116,8 +217,49 @@ def get_visitor_details(session: Session, visitor_id: int) -> Optional[Dict[str,
     v_dict = visitor.to_dict()
     v_dict["cameras_visited_count"] = len(cameras_visited)
     v_dict["distinct_objects"] = sorted(list(objects_seen))
+    v_dict["violation_count"] = sum(
+        1 for event in events
+        if event.event_type in {"VIOLATION", "LITTERING", "OBJECT_LEFT_BEHIND"}
+    )
     v_dict["recent_events"] = [e.to_dict() for e in events[:10]]
+    entries = (
+        session.query(VisitorEntry)
+        .filter(VisitorEntry.visitor_id == visitor_id)
+        .order_by(VisitorEntry.timestamp.desc(), VisitorEntry.id.desc())
+        .limit(20)
+        .all()
+    )
+    v_dict["is_present"] = is_visitor_present(session, visitor_id)
+    v_dict["gate_events"] = [
+        {
+            "id": item.id,
+            "event_type": item.event_type,
+            "source": item.source,
+            "camera_id": item.camera_id,
+            "confidence": item.confidence,
+            "confirmed": item.confirmed,
+            "timestamp": item.timestamp.isoformat() if item.timestamp else None,
+        }
+        for item in entries
+    ]
     return v_dict
+
+
+def purge_expired_non_violators(session: Session, retention_hours: int = 24) -> int:
+    """Redact non-violating profiles whose last observation is past retention."""
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=retention_hours)
+    candidates = session.query(Visitor).filter(
+        Visitor.status == "ACTIVE", Visitor.last_seen < cutoff
+    ).all()
+    purged = 0
+    for visitor in candidates:
+        has_violation = session.query(Event.id).filter(
+            Event.visitor_id == visitor.id,
+            Event.event_type.in_(("VIOLATION", "LITTERING", "OBJECT_LEFT_BEHIND")),
+        ).first()
+        if not has_violation and purge_visitor_data(session, visitor.id, "Automatic non-violator retention purge"):
+            purged += 1
+    return purged
 
 
 def merge_visitor_profiles(session: Session, source_id: int, target_id: int, reason: str = "") -> bool:
@@ -127,8 +269,9 @@ def merge_visitor_profiles(session: Session, source_id: int, target_id: int, rea
     if not source or not target:
         return False
 
-    # Re-link embeddings, tracks, and events to target
+    # Re-link all identity-associated records to the target profile.
     session.query(VisitorEmbedding).filter(VisitorEmbedding.visitor_id == source_id).update({"visitor_id": target_id})
+    session.query(VisitorEntry).filter(VisitorEntry.visitor_id == source_id).update({"visitor_id": target_id})
     session.query(Track).filter(Track.visitor_id == source_id).update({"visitor_id": target_id})
     session.query(Event).filter(Event.visitor_id == source_id).update({"visitor_id": target_id})
 

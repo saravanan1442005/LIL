@@ -8,6 +8,7 @@ Matching the exact layout, structure, tables, figures, and formatting of IDP_202
 import os
 import docx
 from docx import Document
+from report_appendix import append_current_implementation_status
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
@@ -985,6 +986,7 @@ def create_document():
                     r.font.bold = True
 
     doc.save(DOCX_OUTPUT)
+    append_current_implementation_status(DOCX_OUTPUT)
     print("DOCX build complete:", DOCX_OUTPUT)
 
 if __name__ == "__main__":
