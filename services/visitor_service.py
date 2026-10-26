@@ -9,12 +9,14 @@ from typing import Optional, Tuple, List, Dict, Any
 from sqlalchemy.orm import Session
 from database.models import Visitor, VisitorEmbedding, VisitorEntry, Event, Track, AuditLog
 from services.reid_service import get_reid_extractor
+from services.face_service import get_face_service
 from services.vector_store import get_vector_store
 from services.audit_service import log_audit_event
 
 logger = logging.getLogger("ecolifybuddy.visitor")
 
 DEFAULT_SIMILARITY_THRESHOLD = 0.68
+
 
 
 def generate_visitor_code(session: Session) -> str:
@@ -101,14 +103,32 @@ def match_or_create_visitor(
     """Recognise returning visitor via 512-d Re-ID embedding search.
     Returns (Visitor, is_new_visitor, similarity_score).
     """
+    now = datetime.datetime.now(datetime.timezone.utc)
+    vstore = get_vector_store(session)
+
+    # 1. InsightFace Facial Recognition (ArcFace 512-d)
+    import os
+    if os.getenv("FACE_RECOGNITION_ENABLED", "false").lower() == "true":
+        try:
+            face_matches = get_face_service().recognize_face(session, person_crop_bgr, threshold=0.48, top_k=1)
+            if face_matches:
+                v_match = face_matches[0]
+                matched_visitor = session.query(Visitor).filter(Visitor.id == v_match["visitor_id"]).first()
+                if matched_visitor:
+                    matched_visitor.last_seen = now
+                    session.commit()
+                    logger.info("Recognized visitor %s via InsightFace (score=%.3f)", matched_visitor.full_name, v_match["confidence"])
+                    return matched_visitor, False, float(v_match["confidence"])
+        except Exception as fe:
+            logger.warning("InsightFace recognition pass error: %s", fe)
+
+    # 2. Appearance Re-ID Embedding Fallback
     extractor = get_reid_extractor()
     embedding = extractor.extract_embedding(person_crop_bgr)
-    vstore = get_vector_store(session)
 
     # Search top match above threshold
     matches = vstore.search_similar(embedding, top_k=1, threshold=threshold, embedding_type="reid")
 
-    now = datetime.datetime.now(datetime.timezone.utc)
 
     if matches:
         visitor_id, similarity = matches[0]

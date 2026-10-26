@@ -75,10 +75,10 @@ class PgVectorStore(VectorStoreInterface):
         # Convert embedding list to string format for pgvector query
         vec_str = "[" + ",".join(str(float(x)) for x in query_embedding) + "]"
         query = text("""
-            SELECT visitor_id, 1 - (embedding <=> :vec::vector) AS similarity
+            SELECT visitor_id, 1 - (embedding <=> CAST(:vec AS vector)) AS similarity
             FROM visitor_embeddings
             WHERE embedding_type = :etype
-            ORDER BY embedding <=> :vec::vector ASC
+            ORDER BY embedding <=> CAST(:vec AS vector) ASC
             LIMIT :k
         """)
         results = self.session.execute(

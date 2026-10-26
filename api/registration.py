@@ -24,6 +24,7 @@ from services.visitor_service import (
     record_gate_event,
 )
 from services.anpr_service import ANPRService, aggregate_plate_reads
+from services.face_service import get_face_service
 
 registration_bp = Blueprint("registration", __name__, url_prefix="/api/v2/registration")
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
@@ -155,9 +156,18 @@ def register_visitor():
             import cv2
             image = cv2.imread(str(photo_path))
             if image is not None:
-                embedding = get_reid_extractor().extract_embedding(image)
-                get_vector_store(session).add_embedding(visitor.id, embedding, embedding_type="reid", confidence=1.0)
-                session.commit()
+                # 1. Appearance Re-ID embedding
+                reid_emb = get_reid_extractor().extract_embedding(image)
+                get_vector_store(session).add_embedding(visitor.id, reid_emb, embedding_type="reid", confidence=1.0)
+                
+                # 2. InsightFace 512-d ArcFace facial embedding
+                try:
+                    face_ok = get_face_service().enroll_visitor_face(session, visitor.id, image)
+                    if face_ok:
+                        visitor.face_enrolled = True
+                except Exception as fe:
+                    current_app.logger.warning("Face enrollment note: %s", fe)
+
                 visitor.plate_enrolled = bool(visitor.vehicle_number)
                 session.commit()
 
@@ -244,6 +254,22 @@ def match_candidate():
             image = cv2.imdecode(data, cv2.IMREAD_COLOR)
             if image is None:
                 return jsonify({"error": "The uploaded image could not be read."}), 400
+            # 1. InsightFace Facial Recognition (ArcFace 512-d)
+            try:
+                face_matches = get_face_service().recognize_face(session, image, threshold=0.50, top_k=5)
+                for fm in face_matches:
+                    v_id = fm["visitor_id"]
+                    candidates[v_id] = {
+                        "visitor": fm["visitor"],
+                        "source": "FACE",
+                        "confidence": fm["confidence"],
+                        "bbox": fm.get("bbox"),
+                        "is_frequent": fm.get("is_frequent", False)
+                    }
+            except Exception as fe:
+                current_app.logger.warning("InsightFace recognition note: %s", fe)
+
+            # 2. Appearance Re-ID matching fallback / complement
             embedding = get_reid_extractor().extract_embedding(image)
             for visitor_id, confidence in get_vector_store(session).search_similar(
                 embedding, top_k=5, threshold=0.68, embedding_type="reid"
@@ -251,7 +277,7 @@ def match_candidate():
                 visitor = session.query(Visitor).filter(Visitor.id == visitor_id, Visitor.status == "ACTIVE").first()
                 if visitor:
                     existing = candidates.get(visitor_id)
-                    if not existing or confidence > existing["confidence"]:
+                    if not existing or (existing["source"] != "FACE" and confidence > existing["confidence"]):
                         candidates[visitor_id] = {
                             "visitor": visitor.to_dict(), "source": "REID", "confidence": confidence
                         }
@@ -355,3 +381,72 @@ def purge_retention():
         return jsonify({"purged": count, "retention_hours": retention_hours})
     finally:
         session.close()
+
+
+@registration_bp.route("/face/recognize", methods=["POST"])
+@roles_required("Admin", "Security Officer")
+def recognize_visitor_face():
+    """Detect and recognize visitor faces in an image using InsightFace ArcFace models."""
+    upload = request.files.get("photo") or request.files.get("frame")
+    if not upload:
+        return jsonify({"error": "A photo or frame image is required."}), 400
+
+    import cv2
+    import numpy as np
+
+    raw = np.frombuffer(upload.read(), dtype=np.uint8)
+    image = cv2.imdecode(raw, cv2.IMREAD_COLOR)
+    if image is None:
+        return jsonify({"error": "The image could not be decoded."}), 400
+
+    session: Session = get_session_factory()()
+    try:
+        matches = get_face_service().recognize_face(session, image, threshold=0.48, top_k=5)
+        return jsonify({
+            "matches": matches,
+            "count": len(matches),
+            "requires_guard_confirmation": True
+        })
+    finally:
+        session.close()
+
+
+@registration_bp.route("/visitors/<int:visitor_id>/face", methods=["POST"])
+@roles_required("Admin", "Security Officer")
+def enroll_face(visitor_id: int):
+    """Enroll or update a visitor's facial recognition embedding using InsightFace."""
+    upload = request.files.get("photo")
+    if not upload:
+        return jsonify({"error": "A photo is required for face enrollment."}), 400
+
+    import cv2
+    import numpy as np
+
+    session: Session = get_session_factory()()
+    try:
+        visitor = session.query(Visitor).filter(Visitor.id == visitor_id).first()
+        if not visitor:
+            return jsonify({"error": "Visitor not found."}), 404
+
+        raw = np.frombuffer(upload.read(), dtype=np.uint8)
+        image = cv2.imdecode(raw, cv2.IMREAD_COLOR)
+        if image is None:
+            return jsonify({"error": "The image could not be decoded."}), 400
+
+        # Save profile photo if missing or updating
+        upload.seek(0)
+        visitor.profile_photo_path = _save_photo(upload)
+        session.commit()
+
+        success = get_face_service().enroll_visitor_face(session, visitor.id, image)
+        if not success:
+            return jsonify({"error": "No clear face detected in the uploaded photo."}), 400
+
+        log_audit_event(session, "ENROLL_FACE", "Visitor", str(visitor_id), details={"model": "InsightFace ArcFace"})
+        return jsonify({
+            "message": "Face enrolled successfully.",
+            "visitor": visitor.to_dict()
+        })
+    finally:
+        session.close()
+
