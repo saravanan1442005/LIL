@@ -290,6 +290,11 @@
             <span id="video-status-text">CLEAN ZONE</span>
           </div>
 
+          <div id="anpr-status-overlay" class="absolute top-14 right-3.5 hidden max-w-[280px] px-3 py-2 rounded-lg bg-slate-950/85 border border-cyan-400/40 text-[11px] text-cyan-100">
+            <p class="font-bold text-cyan-300">Plate recognition</p>
+            <p id="anpr-status-text">Waiting for a stable plate...</p>
+          </div>
+
           <!-- Bottom Floating Control Dock -->
           <div class="absolute bottom-3.5 inset-x-3.5 flex items-center justify-between px-4 py-2 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/10 text-xs text-white">
             <div class="flex items-center gap-3">
@@ -859,6 +864,35 @@
       }
     }
 
+    function updateAnprStatus(anpr) {
+      const overlay = document.getElementById('anpr-status-overlay');
+      const text = document.getElementById('anpr-status-text');
+      if (!overlay || !text || !anpr || !anpr.result) return;
+
+      const result = anpr.result;
+      const candidate = result.candidate;
+      if (!anpr.enabled) {
+        overlay.classList.remove('hidden');
+        text.textContent = 'Disabled';
+        return;
+      }
+      if (!candidate) {
+        overlay.classList.add('hidden');
+        return;
+      }
+
+      const matches = candidate.matches || [];
+      if (matches.length) {
+        const visitor = matches[0];
+        text.textContent = candidate.normalized_text + ' matched ' +
+          (visitor.visitor_code || 'visitor') + ' - ' + (visitor.full_name || 'registered visitor') +
+          ' (guard confirmation required)';
+      } else {
+        text.textContent = candidate.normalized_text + ' detected; no registered visitor match';
+      }
+      overlay.classList.remove('hidden');
+    }
+
     // Toggle Sound
     async function toggleSound() {
       try {
@@ -1000,6 +1034,7 @@
         appState.is_alert = data.is_alert;
         appState.sound_enabled = data.sound_enabled;
         appState.show_boxes = data.show_boxes;
+        updateAnprStatus(data.anpr);
 
         // Auto-snap event trigger
         if (data.latest_snap && data.latest_snap !== appState.lastSnapped) {

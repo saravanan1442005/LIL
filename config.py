@@ -23,8 +23,8 @@ DEFAULT_CONFIG = {
         "frame_height": 480,
     },
     "anpr_settings": {
-        "enabled": False,
-        "model_path": "",
+        "enabled": True,
+        "model_path": "plate_reg/ANPR/runs/detect/license_plate_detector/weights/best.pt",
         "detector_threshold": 0.35,
         "minimum_consensus_frames": 2,
         "roi": None,

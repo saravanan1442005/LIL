@@ -2,6 +2,8 @@
 Provides listing, profile inspection, human-in-the-loop category/label editing,
 profile merging, and DPDP Act 2023 right-to-be-forgotten data erasure.
 """
+from datetime import datetime, timezone
+
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy.orm import Session
 from database.connection import get_session_factory
@@ -47,15 +49,19 @@ def list_visitors():
 
         total = query.count()
         visitors = query.order_by(Visitor.last_seen.desc()).offset(offset).limit(limit).all()
+        visitor_list = []
+        for v in visitors:
+            payload = v.to_dict() | {"is_present": is_visitor_present(session, v.id)}
+            payload["updated_at"] = v.updated_at.isoformat() if v.updated_at else None
+            payload["last_seen_iso"] = v.last_seen.isoformat() if v.last_seen else None
+            visitor_list.append(payload)
 
         return jsonify({
             "total": total,
             "limit": limit,
             "offset": offset,
-            "visitors": [
-                v.to_dict() | {"is_present": is_visitor_present(session, v.id)}
-                for v in visitors
-            ]
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "visitors": visitor_list
         })
     finally:
         session.close()

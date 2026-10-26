@@ -27,7 +27,31 @@
         <select name="category" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
           <option>Unknown</option><option>Delivery</option><option>Technician</option><option>Vendor</option><option>Domestic Worker</option><option>Guest</option>
         </select>
-        <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+        <div class="md:col-span-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p class="font-semibold text-slate-700 dark:text-slate-200">Reference photo for CCTV matching</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">Take a clear face photo or upload one to create the visitor match profile.</p>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" id="start-camera-button" class="px-3 py-2 rounded-lg border border-brand-300 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-950/40 font-semibold">Use camera</button>
+              <label class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 font-semibold cursor-pointer">
+                Upload photo
+                <input id="visitor-photo-input" name="photo" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only">
+              </label>
+            </div>
+          </div>
+          <div id="camera-capture-panel" class="hidden mt-3 space-y-3">
+            <video id="visitor-camera-preview" class="w-full max-h-64 rounded-lg bg-slate-950 object-contain" autoplay playsinline></video>
+            <div class="flex gap-2">
+              <button type="button" id="capture-photo-button" class="px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold">Take photo</button>
+              <button type="button" id="stop-camera-button" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">Close camera</button>
+            </div>
+          </div>
+          <img id="visitor-photo-preview" alt="Selected visitor reference photo" class="hidden mt-3 max-h-48 rounded-lg object-contain">
+          <canvas id="visitor-photo-canvas" class="hidden"></canvas>
+          <p id="photo-capture-status" class="text-[11px] text-slate-500 dark:text-slate-400 mt-2">A reference photo is recommended for face and appearance matching.</p>
+        </div>
         <label class="flex items-center gap-2 px-2 py-2"><input name="face_consent" value="true" type="checkbox"> Visitor consented to face enrollment</label>
         <button type="submit" class="md:col-span-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold">Register visitor</button>
       </form>
@@ -129,6 +153,9 @@
   }
 
   var currentCatFilter = 'ALL';
+  var lastVisitorSnapshot = null;
+  var visitorRequestInFlight = false;
+  var visitorCameraStream = null;
   function enrollmentMessage(text, error) {
     var el = document.getElementById('enrollment-message');
     if (el) {
@@ -137,9 +164,95 @@
     }
   }
 
+  function stopVisitorCamera() {
+    if (visitorCameraStream) {
+      visitorCameraStream.getTracks().forEach(function(track) { track.stop(); });
+      visitorCameraStream = null;
+    }
+    var panel = document.getElementById('camera-capture-panel');
+    var video = document.getElementById('visitor-camera-preview');
+    if (panel) panel.classList.add('hidden');
+    if (video) video.srcObject = null;
+  }
+
+  function showVisitorPhotoPreview(file) {
+    var preview = document.getElementById('visitor-photo-preview');
+    if (!preview || !file) return;
+    if (preview.dataset.objectUrl) URL.revokeObjectURL(preview.dataset.objectUrl);
+    var objectUrl = URL.createObjectURL(file);
+    preview.dataset.objectUrl = objectUrl;
+    preview.src = objectUrl;
+    preview.classList.remove('hidden');
+  }
+
+  var photoInput = document.getElementById('visitor-photo-input');
+  if (photoInput) photoInput.addEventListener('change', function() {
+    var file = photoInput.files && photoInput.files[0];
+    if (file) {
+      stopVisitorCamera();
+      showVisitorPhotoPreview(file);
+      document.getElementById('photo-capture-status').textContent = 'Photo selected and ready for CCTV matching.';
+    }
+  });
+
+  var startCameraButton = document.getElementById('start-camera-button');
+  if (startCameraButton) startCameraButton.addEventListener('click', function() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      document.getElementById('photo-capture-status').textContent = 'Camera access is not available in this browser. Use Upload photo instead.';
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({video: {facingMode: 'user'}, audio: false})
+      .then(function(stream) {
+        visitorCameraStream = stream;
+        var video = document.getElementById('visitor-camera-preview');
+        video.srcObject = stream;
+        document.getElementById('camera-capture-panel').classList.remove('hidden');
+        document.getElementById('photo-capture-status').textContent = 'Center the visitor face, then select Take photo.';
+      })
+      .catch(function(error) {
+        document.getElementById('photo-capture-status').textContent = 'Could not access the camera: ' + error.message + '. Use Upload photo instead.';
+      });
+  });
+
+  var stopCameraButton = document.getElementById('stop-camera-button');
+  if (stopCameraButton) stopCameraButton.addEventListener('click', function() {
+    stopVisitorCamera();
+    document.getElementById('photo-capture-status').textContent = 'Camera closed. Use the existing photo or upload another one.';
+  });
+
+  var capturePhotoButton = document.getElementById('capture-photo-button');
+  if (capturePhotoButton) capturePhotoButton.addEventListener('click', function() {
+    var video = document.getElementById('visitor-camera-preview');
+    var canvas = document.getElementById('visitor-photo-canvas');
+    if (!video.videoWidth || !video.videoHeight) {
+      document.getElementById('photo-capture-status').textContent = 'Camera is not ready yet. Please wait a moment and try again.';
+      return;
+    }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(function(blob) {
+      if (!blob) {
+        document.getElementById('photo-capture-status').textContent = 'The photo could not be captured. Please try again.';
+        return;
+      }
+      var file = new File([blob], 'visitor-camera-capture.jpg', {type: 'image/jpeg'});
+      var transfer = new DataTransfer();
+      transfer.items.add(file);
+      photoInput.files = transfer.files;
+      showVisitorPhotoPreview(file);
+      stopVisitorCamera();
+      document.getElementById('photo-capture-status').textContent = 'Photo captured and ready for CCTV matching.';
+    }, 'image/jpeg', 0.92);
+  });
+
   var enrollmentForm = document.getElementById('visitor-enrollment-form');
   if (enrollmentForm) enrollmentForm.addEventListener('submit', function(event) {
     event.preventDefault();
+    if (!photoInput || !photoInput.files || !photoInput.files[0]) {
+      enrollmentMessage('Take or upload a reference photo before registering this visitor for CCTV matching.', true);
+      return;
+    }
     var token = localStorage.getItem('auth_token');
     fetch('/api/v2/registration/visitors', {
       method: 'POST',
@@ -151,6 +264,9 @@
         if (!result.ok) throw new Error(result.data.error || 'Registration failed.');
         enrollmentMessage('Registered ' + result.data.visitor.visitor_code + '. Future matches can use Re-ID and the enrolled vehicle number.');
         enrollmentForm.reset();
+        stopVisitorCamera();
+        document.getElementById('visitor-photo-preview').classList.add('hidden');
+        document.getElementById('photo-capture-status').textContent = 'A reference photo is recommended for face and appearance matching.';
         document.getElementById('enrollment-status').textContent = 'Phone stored with profile';
         loadVisitorsData();
       }).catch(function(error) { enrollmentMessage(error.message, true); });
@@ -174,12 +290,17 @@
   window.loadVisitorsData = function() {
     var tbody = document.getElementById('visitors-table-body');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-slate-400">Loading visitors...</td></tr>';
 
     var q = document.getElementById('visitor-search-input') ? document.getElementById('visitor-search-input').value.trim() : '';
     var url = '/api/v2/visitors?limit=100';
     if (currentCatFilter !== 'ALL') url += '&category=' + encodeURIComponent(currentCatFilter);
     if (q) url += '&q=' + encodeURIComponent(q);
+
+    if (visitorRequestInFlight) return;
+    visitorRequestInFlight = true;
+    if (!lastVisitorSnapshot) {
+      tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-slate-400">Loading visitors...</td></tr>';
+    }
 
     var token = localStorage.getItem('auth_token');
     var headers = token ? {'Authorization': 'Bearer ' + token} : {};
@@ -194,6 +315,12 @@
           throw new Error(data.error);
         }
         var list = data.visitors || [];
+        var snapshot = url + '|' + JSON.stringify({total: data.total || 0, generated_at: data.generated_at || '', visitors: list});
+        if (snapshot === lastVisitorSnapshot) {
+          return;
+        }
+        lastVisitorSnapshot = snapshot;
+
         if (list.length === 0) {
           tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-slate-400 italic">No visitors matched the current filter.</td></tr>';
           return;
@@ -232,6 +359,9 @@
       })
       .catch(function(err) {
         tbody.innerHTML = '<tr><td colspan="10" class="p-8 text-center text-red-500">Failed to load visitors: ' + err.message + '</td></tr>';
+      })
+      .then(function() {
+        visitorRequestInFlight = false;
       });
   };
 
@@ -301,4 +431,11 @@
   };
 
   loadVisitorsData();
+  if (!window._visitorsInterval) {
+    window._visitorsInterval = setInterval(function() {
+      if (document.getElementById('visitors-section')) {
+        window.loadVisitorsData();
+      }
+    }, 15000);
+  }
 </script>

@@ -24,7 +24,7 @@ def is_youtube_url(url):
     ])
 
 
-def resolve_youtube_stream(url, target_height=720, force_refresh=False):
+def resolve_youtube_stream(url, target_height=480, force_refresh=False):
     """Resolve a YouTube URL or Live Stream to a direct playable OpenCV stream URL.
     
     Args:
@@ -106,7 +106,7 @@ def resolve_youtube_stream(url, target_height=720, force_refresh=False):
         return None, None
 
 
-def resolve_stream_source(source, target_height=720):
+def resolve_stream_source(source, target_height=480):
     """Normalize any source (device index, RTSP, file, or YouTube URL) for cv2.VideoCapture.
     
     Returns:
@@ -122,6 +122,12 @@ def resolve_stream_source(source, target_height=720):
         return int(source), {"title": f"Webcam Device {source}", "type": "webcam"}
 
     source_str = str(source).strip()
+
+    # Auto-normalize IP Webcam / DroidCam stream URLs if /video path is omitted
+    if source_str.lower().startswith("http://") and (":8080" in source_str or ":4747" in source_str):
+        clean_url = source_str.rstrip("/")
+        if not any(clean_url.endswith(ext) for ext in ["/video", "/video_feed", "/mjpeg", "/shot.jpg"]):
+            source_str = clean_url + "/video"
 
     # YouTube URL
     if is_youtube_url(source_str):

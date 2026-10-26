@@ -9,6 +9,7 @@ import threading
 import queue
 import webbrowser
 import datetime
+from urllib.parse import urlparse, urlunparse
 from flask import Flask, render_template, Response, jsonify, request, send_from_directory
 
 from detector import EcoDetector
@@ -18,8 +19,27 @@ from alert_system import AlertSystem, VIOLATIONS_DIR, ALERT_LOG_FILE
 from config import load_config, save_config
 from stream_resolver import resolve_stream_source, is_youtube_url, resolve_youtube_stream
 from services.anpr_service import ANPRService, aggregate_plate_reads
+from database.connection import get_session_factory
+from database.models import Visitor
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Guard-App, X-Requested-With"
+    return response
+
+@app.before_request
+def handle_preflight():
+    from flask import request
+    if request.method == "OPTIONS":
+        response = app.make_default_options_response()
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Guard-App, X-Requested-With"
+        return response
 
 # New module (Intelligent Visitor Identification & Activity Tracking) blueprints & DB.
 from api import register_blueprints
@@ -63,6 +83,42 @@ def open_webcam(preferred_idx=0):
     return None, None
 
 
+def normalize_network_source(source):
+    """Normalize common IP Webcam URLs for OpenCV."""
+    value = str(source or "").strip()
+    parsed = urlparse(value)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        return value
+
+    host = parsed.hostname.lower()
+    port = parsed.port
+    is_ip_webcam = port in (8080, 4747) and (
+        host == "localhost"
+        or host == "127.0.0.1"
+        or host.startswith("192.168.")
+        or host.startswith("10.")
+        or host.startswith("172.16.")
+        or host.startswith("172.17.")
+        or host.startswith("172.18.")
+        or host.startswith("172.19.")
+        or host.startswith("172.2")
+        or host.startswith("172.30.")
+        or host.startswith("172.31.")
+    )
+    if not is_ip_webcam:
+        return value
+
+    path = parsed.path.rstrip("/")
+    if not path:
+        path = "/video"
+    elif path.lower() in ("", "/"):
+        path = "/video"
+
+    # IP Webcam normally exposes an HTTP MJPEG endpoint, not HTTPS.
+    scheme = "http" if parsed.scheme == "https" else parsed.scheme
+    return urlunparse((scheme, parsed.netloc, path, "", parsed.query, ""))
+
+
 # ==============================================================================
 # GLOBAL AI & CAMERA STATE
 # ==============================================================================
@@ -82,7 +138,9 @@ class LiveMonitorState:
         if self.cameras:
             c = self.cameras[0]
             self.active_camera_id = c.get("id", 1)
-            self.active_source = c.get("source", self.active_source)
+            self.active_source = normalize_network_source(
+                c.get("source", self.active_source)
+            )
             self.camera_title = c.get("name", self.camera_title)
             self.zone = c.get("zone", self.zone)
             src = str(self.active_source)
@@ -143,9 +201,31 @@ class LiveMonitorState:
                 self.demo_frames.append(img)
 
     def reload_cameras(self):
-        cfg = load_config()
+        cams = []
+        try:
+            from database.connection import get_session_factory
+            from database.models import Camera
+            session = get_session_factory()()
+            db_cams = session.query(Camera).filter(Camera.enabled == True).order_by(Camera.id.asc()).all()
+            for c in db_cams:
+                cams.append({
+                    "id": c.id,
+                    "name": c.name,
+                    "source": c.stream_source,
+                    "type": c.stream_type or "RTSP",
+                    "enabled": c.enabled,
+                    "zone": c.location or "Gate Zone"
+                })
+            session.close()
+        except Exception as e:
+            print(f"Error loading DB cameras: {e}")
+
+        if not cams:
+            cfg = load_config()
+            cams = cfg.get("cameras", [])
+
         with self.lock:
-            self.cameras = cfg.get("cameras", [])
+            self.cameras = cams
 
     def open_camera(self):
         # Prevent concurrent open attempts
@@ -175,7 +255,7 @@ class LiveMonitorState:
 
             if cur_mode == "youtube" or is_youtube_url(str(cur_source)):
                 print(f"📡 Resolving YouTube Live Stream: {cur_source}...")
-                stream_url, meta = resolve_stream_source(cur_source, target_height=720)
+                stream_url, meta = resolve_stream_source(cur_source, target_height=480)
                 if stream_url:
                     try:
                         new_cap = cv2.VideoCapture(stream_url)
@@ -224,13 +304,42 @@ class LiveMonitorState:
 
             elif cur_mode == "custom":
                 try:
-                    new_cap = cv2.VideoCapture(cur_source)
-                    new_cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                    if new_cap.isOpened():
-                        is_conn = True
-                        new_status = "LIVE NETWORK STREAM"
-                    else:
-                        new_status = "Failed to open network stream"
+                    src_str = normalize_network_source(cur_source)
+                    # Quick pre-flight check for HTTP/RTSP URLs to avoid long OpenCV socket hang
+                    if src_str.lower().startswith(("http://", "https://")):
+                        try:
+                            import socket
+                            parsed = urlparse(src_str)
+                            host = parsed.hostname
+                            port = parsed.port or 80
+                            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                                s.settimeout(1.2)
+                                if s.connect_ex((host, port)) != 0:
+                                    raise ConnectionError(f"Host {host}:{port} unreachable")
+                        except Exception as conn_err:
+                            new_status = (
+                                f"Cannot reach {src_str} - check that the phone and computer "
+                                "are on the same Wi-Fi and IP Webcam is running"
+                            )
+                            print(f"⚠️ Quick pre-flight check failed for {src_str}: {conn_err}")
+                            src_str = None
+
+                    if src_str:
+                        new_cap = cv2.VideoCapture(src_str)
+                        new_cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        if new_cap.isOpened():
+                            ret_test, _ = new_cap.read()
+                            if ret_test:
+                                is_conn = True
+                                new_status = "LIVE NETWORK STREAM CONNECTED"
+                            else:
+                                is_conn = True
+                                new_status = "Connected, awaiting frame..."
+                        else:
+                            new_status = (
+                                f"Cannot open stream: {src_str} - verify IP Webcam's "
+                                "video stream is enabled"
+                            )
                 except Exception as e:
                     new_status = str(e)
 
@@ -268,6 +377,21 @@ def anpr_worker_loop():
                     state.anpr_history,
                     minimum_frames=int(profile.get("minimum_consensus_frames", 2)),
                 )
+                if candidate:
+                    session = get_session_factory()()
+                    try:
+                        candidate["matches"] = [
+                            visitor.to_dict()
+                            for visitor in session.query(Visitor)
+                            .filter(
+                                Visitor.status == "ACTIVE",
+                                Visitor.vehicle_number == candidate["normalized_text"],
+                            )
+                            .limit(5)
+                            .all()
+                        ]
+                    finally:
+                        session.close()
                 state.anpr_result = {
                     "status": result.get("status", "UNKNOWN"),
                     "camera_id": camera_id,
@@ -309,10 +433,16 @@ def camera_worker_loop():
             cur_mode = state.camera_mode
 
         if cur_mode in ("youtube", "webcam", "custom") and cur_cap and cur_cap.isOpened():
-            ret, frame = cur_cap.read()
-            if not ret or frame is None or frame.size == 0:
+            try:
+                ret, frame = cur_cap.read()
+            except (cv2.error, MemoryError, SystemError, Exception) as read_err:
+                print(f"⚠️ Video stream frame read error: {read_err}")
+                ret, frame = False, None
+                import gc; gc.collect()
+
+            if not ret or frame is None or getattr(frame, "size", 0) == 0:
                 fail_count += 1
-                if fail_count > 30:
+                if fail_count > 25:
                     print(f"⚠️ Reconnecting stream ({cur_mode}) after frame drop...")
                     fail_count = 0
                     threading.Thread(target=state.open_camera, daemon=True).start()
@@ -334,10 +464,12 @@ def camera_worker_loop():
         else:
             # Connecting or transition placeholder canvas
             canvas = np.full((720, 1280, 3), (16, 23, 38), dtype=np.uint8)
-            msg = f"ECOLIFEBUDDY AI - {state.status_message}".encode('ascii', 'replace').decode('ascii')
-            cv2.putText(canvas, msg, (280, 340), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (16, 185, 129), 2)
-            cam_txt = str(state.camera_title).encode('ascii', 'replace').decode('ascii')
-            cv2.putText(canvas, cam_txt, (280, 385), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (148, 163, 184), 1)
+            msg = f"{state.camera_title}: {state.status_message}".encode('ascii', 'replace').decode('ascii')
+            cv2.putText(canvas, msg, (80, 320), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (16, 185, 129), 2)
+            src_txt = f"Source URI: {state.active_source}".encode('ascii', 'replace').decode('ascii')
+            cv2.putText(canvas, src_txt, (80, 370), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (203, 213, 225), 1)
+            hint_txt = "Tip: Make sure phone is on the same Wi-Fi network and IP Webcam is running.".encode('ascii', 'replace').decode('ascii')
+            cv2.putText(canvas, hint_txt, (80, 420), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (148, 163, 184), 1)
             with state.lock:
                 state.latest_display_frame = canvas
             time.sleep(0.1)
@@ -529,6 +661,7 @@ def serve_violation_image(filename):
 @app.route('/api/telemetry')
 def get_status():
     """Returns real-time system status and metrics."""
+    state.reload_cameras()
     with state.lock:
         return jsonify({
             "status": "ONLINE",
@@ -572,6 +705,7 @@ def get_anpr_status():
 @app.route('/api/cameras')
 def get_cameras():
     """Returns list of all configured cameras and active camera ID."""
+    state.reload_cameras()
     with state.lock:
         return jsonify({
             "system_name": "ECOLIFEBUDDY",
@@ -582,13 +716,8 @@ def get_cameras():
         })
 
 
-@app.route('/api/select_camera', methods=['POST'])
-def select_camera():
-    """Switch active camera to a configured camera ID or demo simulation."""
-    data = request.get_json(silent=True) or request.form.to_dict() or {}
-    cam_id = data.get("id")
-    mode = data.get("mode")
-
+def _apply_camera_selection(cam_id=None, mode=None):
+    """Internal helper to switch the active camera by ID or mode."""
     if mode == "demo":
         with state.lock:
             state.camera_mode = "demo"
@@ -609,13 +738,15 @@ def select_camera():
         except ValueError:
             pass
 
+        state.reload_cameras()
         found = False
         with state.lock:
             for c in state.cameras:
                 if c.get("id") == cam_id:
                     found = True
                     state.active_camera_id = cam_id
-                    state.active_source = c.get("source")
+                    raw_src = normalize_network_source(c.get("source", ""))
+                    state.active_source = raw_src
                     state.camera_title = c.get("name")
                     state.zone = c.get("zone", "Monitored Zone")
                     src = str(state.active_source)
@@ -638,6 +769,21 @@ def select_camera():
             })
 
     return jsonify({"success": False, "error": f"Camera ID {cam_id} not found"}), 404
+
+
+@app.route('/api/switch_camera/<int:cam_id>', methods=['GET', 'POST'])
+def switch_camera(cam_id):
+    """Switch active camera to a configured camera ID via URL parameter."""
+    return _apply_camera_selection(cam_id=cam_id)
+
+
+@app.route('/api/select_camera', methods=['POST'])
+def select_camera():
+    """Switch active camera to a configured camera ID or demo simulation."""
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    cam_id = data.get("id")
+    mode = data.get("mode")
+    return _apply_camera_selection(cam_id=cam_id, mode=mode)
 
 
 @app.route('/api/violations')
@@ -773,7 +919,9 @@ def toggle_mode():
 def set_source():
     """Set custom camera source and start detecting immediately."""
     data = request.get_json(silent=True) or request.form.to_dict() or {}
-    new_source = (data.get("source") or request.args.get("source") or "").strip()
+    new_source = normalize_network_source(
+        (data.get("source") or request.args.get("source") or "").strip()
+    )
     name = (data.get("name") or request.args.get("name") or "").strip()
     zone = (data.get("zone") or request.args.get("zone") or "Monitored Zone").strip()
 

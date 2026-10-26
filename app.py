@@ -1,10 +1,20 @@
-# app.py — Main Entry Point for ECOLIFEBUDDY Surveillance Workstation
-import subprocess
-import sys
-import time
 import os
+import sys
+import subprocess
+
+# Auto-switch to project virtual environment if global python is used
+venv_python = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".venv", "Scripts", "python.exe")
+if os.path.exists(venv_python) and os.path.abspath(sys.executable).lower() != os.path.abspath(venv_python).lower():
+    try:
+        import sqlalchemy
+    except ImportError:
+        result = subprocess.call([venv_python] + sys.argv)
+        sys.exit(result)
+
+import time
 import webbrowser
 import threading
+
 
 def run_workstation():
     """Launch the ECOLIFEBUDDY Surveillance Workstation."""

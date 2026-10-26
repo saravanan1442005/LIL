@@ -58,10 +58,21 @@ def record_gate_event(
     """Persist a confirmed entry/exit event and update the visitor's presence."""
     event_type = event_type.upper()
     source = source.upper()
+    if any(k in source for k in ["GUARD", "MANUAL", "CONFIRM", "BUTTON"]):
+        source = "MANUAL"
+    elif "FACE" in source:
+        source = "FACE"
+    elif any(k in source for k in ["PLATE", "ANPR"]):
+        source = "PLATE"
+    elif "PHONE" in source:
+        source = "PHONE"
+    elif "REID" in source:
+        source = "REID"
+    elif source not in {"FACE", "PLATE", "REID", "PHONE", "MANUAL"}:
+        source = "MANUAL"
+
     if event_type not in {"ENTRY", "EXIT"}:
         raise ValueError("event_type must be ENTRY or EXIT")
-    if source not in {"FACE", "PLATE", "REID", "PHONE", "MANUAL"}:
-        raise ValueError("Invalid gate event source")
 
     visitor = session.query(Visitor).filter(
         Visitor.id == visitor_id, Visitor.status == "ACTIVE"

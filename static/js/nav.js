@@ -34,13 +34,11 @@
   }
 
   function loadPartial(name) {
-    if (cache[name]) return Promise.resolve(cache[name]);
-    return fetch('/partials/' + encodeURIComponent(name), { credentials: 'same-origin' })
+    return fetch('/partials/' + encodeURIComponent(name) + '?t=' + Date.now(), { credentials: 'same-origin' })
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.text();
-      })
-      .then(function (html) { cache[name] = html; return html; });
+      });
   }
 
   function show(view) {

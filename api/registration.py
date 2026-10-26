@@ -47,6 +47,13 @@ def _get_anpr_service() -> ANPRService:
     return _anpr_service
 
 
+def _normalize_vehicle_number(value: object) -> str | None:
+    if value is None:
+        return None
+    cleaned = "".join(ch for ch in str(value).upper() if ch.isalnum())
+    return cleaned or None
+
+
 def _save_photo(upload) -> str:
     filename = secure_filename(upload.filename or "")
     extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
@@ -98,11 +105,16 @@ def read_plate():
     result = _get_anpr_service().read_frame(frame, profile)
     for read in result.get("reads", []):
         read["matches"] = []
+        normalized = _normalize_vehicle_number(read.get("normalized_text"))
+        if not normalized:
+            continue
         with_session = get_session_factory()()
         try:
             matches = (
                 with_session.query(Visitor)
-                .filter(Visitor.status == "ACTIVE", Visitor.vehicle_number == read["normalized_text"])
+                .filter(Visitor.status == "ACTIVE")
+                .filter(Visitor.vehicle_number.isnot(None))
+                .filter(Visitor.vehicle_number == normalized)
                 .limit(5)
                 .all()
             )
@@ -130,6 +142,7 @@ def register_visitor():
         if existing:
             return jsonify({"error": "A visitor with this phone number already exists.", "visitor": existing.to_dict()}), 409
 
+        vehicle_number = _normalize_vehicle_number(data.get("vehicle_number"))
         visitor = Visitor(
             visitor_code=generate_visitor_code(session),
             full_name=data.get("full_name", "").strip(),
@@ -138,8 +151,8 @@ def register_visitor():
             phone_last4=phone[-4:],
             phone_verified=False,
             company=(data.get("company") or "").strip() or None,
-            vehicle_number=(data.get("vehicle_number") or "").strip().upper() or None,
-            plate_enrolled=bool((data.get("vehicle_number") or "").strip()),
+            vehicle_number=vehicle_number,
+            plate_enrolled=bool(vehicle_number),
             category=(data.get("category") or "Unknown").strip(),
             label=(data.get("label") or "").strip() or None,
             consent_status="GRANTED" if str(data.get("face_consent", "")).lower() == "true" else "DECLINED",
@@ -184,8 +197,8 @@ def register_visitor():
 @roles_required("Admin", "Security Officer")
 def enroll_plate(visitor_id: int):
     data = request.get_json(silent=True) or {}
-    vehicle_number = "".join(str(data.get("vehicle_number", "")).upper().split())
-    if len(vehicle_number) < 4:
+    vehicle_number = _normalize_vehicle_number(data.get("vehicle_number"))
+    if not vehicle_number or len(vehicle_number) < 4:
         return jsonify({"error": "A valid vehicle number is required."}), 400
     session: Session = get_session_factory()()
     try:
@@ -289,13 +302,27 @@ def match_candidate():
 
 
 @registration_bp.route("/entry", methods=["POST"])
+@registration_bp.route("/entries", methods=["POST"])
 @roles_required("Admin", "Security Officer")
 def confirm_entry():
     data = request.get_json(silent=True) or {}
     visitor_id = data.get("visitor_id")
     source = str(data.get("source", "MANUAL")).upper()
-    if not visitor_id or source not in {"FACE", "PLATE", "REID", "PHONE", "MANUAL"}:
-        return jsonify({"error": "visitor_id and a valid source are required."}), 400
+    if any(k in source for k in ["GUARD", "MANUAL", "CONFIRM", "BUTTON"]):
+        source = "MANUAL"
+    elif "FACE" in source:
+        source = "FACE"
+    elif any(k in source for k in ["PLATE", "ANPR"]):
+        source = "PLATE"
+    elif "PHONE" in source:
+        source = "PHONE"
+    elif "REID" in source:
+        source = "REID"
+    elif source not in {"FACE", "PLATE", "REID", "PHONE", "MANUAL"}:
+        source = "MANUAL"
+
+    if not visitor_id:
+        return jsonify({"error": "visitor_id is required."}), 400
     session: Session = get_session_factory()()
     try:
         visitor = session.query(Visitor).filter(Visitor.id == int(visitor_id), Visitor.status == "ACTIVE").first()
@@ -387,17 +414,29 @@ def purge_retention():
 @roles_required("Admin", "Security Officer")
 def recognize_visitor_face():
     """Detect and recognize visitor faces in an image using InsightFace ArcFace models."""
-    upload = request.files.get("photo") or request.files.get("frame")
-    if not upload:
-        return jsonify({"error": "A photo or frame image is required."}), 400
-
     import cv2
     import numpy as np
 
-    raw = np.frombuffer(upload.read(), dtype=np.uint8)
-    image = cv2.imdecode(raw, cv2.IMREAD_COLOR)
+    upload = request.files.get("photo") or request.files.get("frame")
+    image = None
+    if upload:
+        raw = np.frombuffer(upload.read(), dtype=np.uint8)
+        image = cv2.imdecode(raw, cv2.IMREAD_COLOR)
+    else:
+        data = request.get_json(silent=True) or {}
+        b64_str = data.get("image") or data.get("frame") or data.get("photo")
+        if b64_str:
+            import base64
+            if "," in b64_str:
+                b64_str = b64_str.split(",", 1)[1]
+            try:
+                raw = np.frombuffer(base64.b64decode(b64_str), dtype=np.uint8)
+                image = cv2.imdecode(raw, cv2.IMREAD_COLOR)
+            except Exception:
+                pass
+
     if image is None:
-        return jsonify({"error": "The image could not be decoded."}), 400
+        return jsonify({"error": "A valid photo, frame, or base64 image is required."}), 400
 
     session: Session = get_session_factory()()
     try:

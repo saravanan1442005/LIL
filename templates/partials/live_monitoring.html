@@ -35,7 +35,7 @@
         <!-- Tripwire Graphic Overlay Placeholder -->
         <div id="tripwire-overlay" class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
           <div class="flex items-center justify-between text-xs text-white/90 drop-shadow-md">
-            <span class="font-mono bg-black/60 px-2.5 py-1 rounded-md" id="active-cam-title">Camera #1 &bull; Main Entrance Gate</span>
+            <span class="font-mono bg-black/60 px-2.5 py-1 rounded-md" id="active-cam-title">Camera Feed</span>
             <span class="bg-brand-600/90 text-white font-bold px-2 py-0.5 rounded-md text-[10px] uppercase">Tracking Online</span>
           </div>
           <!-- Simulated tripwire line indicator -->
@@ -49,11 +49,9 @@
         </div>
       </div>
 
-      <!-- Camera Selector Strip -->
+      <!-- Dynamic Camera Selector Strip -->
       <div class="flex items-center gap-2 overflow-x-auto pb-1" id="cam-selector-strip">
-        <button onclick="switchLiveCam(1, 'Main Entrance Gate')" class="px-3.5 py-2 rounded-xl bg-brand-600 text-white font-bold text-xs shadow-xs cursor-pointer">Cam 1: Entrance</button>
-        <button onclick="switchLiveCam(2, 'Promenade & Crosswalk')" class="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-brand-400 font-semibold text-xs cursor-pointer">Cam 2: Promenade</button>
-        <button onclick="switchLiveCam(3, 'Station Webcam')" class="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-brand-400 font-semibold text-xs cursor-pointer">Cam 3: Webcam</button>
+        <span class="text-xs text-slate-400 py-2">Loading cameras...</span>
       </div>
     </div>
 
@@ -99,11 +97,70 @@
 </section>
 
 <script>
+  window.loadLiveCameras = function() {
+    var strip = document.getElementById('cam-selector-strip');
+    if (!strip) return;
+
+    fetch('/api/cameras')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var cams = data.cameras || [];
+        var activeId = data.active_camera_id;
+        if (!cams.length) {
+          strip.innerHTML = '<span class="text-xs text-slate-400 py-1">No cameras configured</span>';
+          return;
+        }
+
+        var html = cams.map(function(cam) {
+          var isActive = (cam.id === activeId);
+          var icon = '🎥';
+          var src = String(cam.source || '');
+          if (cam.type === 'USB' || src === '0' || src.length <= 2) icon = '💻';
+          else if (src.indexOf(':8080') !== -1 || src.indexOf(':4747') !== -1) icon = '📱';
+          else if (src.indexOf('youtube') !== -1) icon = '📡';
+
+          var activeCls = 'bg-brand-600 text-white font-bold shadow-xs ring-2 ring-brand-400/50';
+          var inactiveCls = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-brand-400 font-semibold';
+          var cls = isActive ? activeCls : inactiveCls;
+
+          if (isActive) {
+            var titleEl = document.getElementById('active-cam-title');
+            if (titleEl) titleEl.innerText = 'Camera #' + cam.id + ' • ' + cam.name;
+          }
+
+          return '<button type="button" data-cam-id="' + cam.id + '" onclick="switchLiveCam(' + cam.id + ', \'' + (cam.name || '').replace(/'/g, "\\'") + '\')" class="px-3.5 py-2 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ' + cls + '">' +
+            '<span>' + icon + '</span>' +
+            '<span>' + (cam.name || ('Cam ' + cam.id)) + '</span>' +
+            (isActive ? '<span class="w-1.5 h-1.5 rounded-full bg-white ml-0.5 animate-pulse"></span>' : '') +
+          '</button>';
+        }).join('');
+
+        strip.innerHTML = html;
+      })
+      .catch(function(err) {
+        console.warn('Failed to load cameras in live monitoring:', err);
+      });
+  };
+
   window.switchLiveCam = function(camId, camName) {
     var titleEl = document.getElementById('active-cam-title');
     if (titleEl) titleEl.innerText = 'Camera #' + camId + ' • ' + camName;
 
-    // Call legacy switch camera endpoint to change backend stream
+    // Update active button classes immediately in strip
+    var strip = document.getElementById('cam-selector-strip');
+    if (strip) {
+      var btns = strip.querySelectorAll('button[data-cam-id]');
+      btns.forEach(function(btn) {
+        var isThis = btn.getAttribute('data-cam-id') == String(camId);
+        if (isThis) {
+          btn.className = 'px-3.5 py-2 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 bg-brand-600 text-white font-bold shadow-xs ring-2 ring-brand-400/50';
+        } else {
+          btn.className = 'px-3.5 py-2 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-brand-400 font-semibold';
+        }
+      });
+    }
+
+    // Call switch camera endpoint
     fetch('/api/switch_camera/' + camId, { method: 'POST' })
       .then(function() { reloadStream(); });
   };
@@ -121,4 +178,7 @@
       img.style.filter = isBlurred ? 'blur(6px)' : 'none';
     }
   };
+
+  // Run on load
+  loadLiveCameras();
 </script>

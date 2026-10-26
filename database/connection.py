@@ -50,8 +50,8 @@ def is_postgres(url: str) -> bool:
     return url.startswith("postgresql")
 
 
-def create_app_engine(max_retries: int = 3, retry_delay: float = 1.5):
-    """Create SQLAlchemy engine with Neon cold-start retry handling and pool_pre_ping."""
+def create_app_engine(max_retries: int = 5, retry_delay: float = 2.0):
+    """Create SQLAlchemy engine with Neon/Supabase retry handling and pool_pre_ping."""
     url = get_database_url(direct=False)
     engine_kwargs = {
         "echo": False,
@@ -71,7 +71,7 @@ def create_app_engine(max_retries: int = 3, retry_delay: float = 1.5):
         # SQLite compatibility flags
         engine_kwargs["connect_args"] = {"check_same_thread": False}
 
-    # Attempt connection with retries for Neon cold starts
+    # Attempt connection with retries
     for attempt in range(1, max_retries + 1):
         try:
             engine = create_engine(url, **engine_kwargs)
@@ -79,10 +79,21 @@ def create_app_engine(max_retries: int = 3, retry_delay: float = 1.5):
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             
-            db_type = "Neon Postgres (pooler)" if is_postgres(url) else "SQLite (Local Fallback)"
+            db_type = "Supabase/Postgres Pooler" if is_postgres(url) else "SQLite (Local Fallback)"
             logger.info("Connected to database: %s", db_type)
             return engine
         except OperationalError as exc:
+            err_str = str(exc).lower()
+            if "getaddrinfo failed" in err_str or "failed to resolve host" in err_str:
+                # DNS transient failure when switching networks: try direct IP fallback
+                try:
+                    import socket
+                    resolved_ip = socket.gethostbyname("aws-0-ap-southeast-1.pooler.supabase.com")
+                except Exception:
+                    resolved_ip = "52.74.252.201"
+                if resolved_ip and "aws-0-ap-southeast-1.pooler.supabase.com" in url:
+                    url = url.replace("aws-0-ap-southeast-1.pooler.supabase.com", resolved_ip)
+
             if attempt == max_retries:
                 logger.warning("Database connection failed after %d attempts. Error: %s", max_retries, exc)
                 # Fallback to SQLite if Postgres unreachable during offline dev
@@ -94,7 +105,7 @@ def create_app_engine(max_retries: int = 3, retry_delay: float = 1.5):
                     fallback_engine = create_engine(fallback_url, connect_args={"check_same_thread": False})
                     return fallback_engine
                 raise
-            time.sleep(retry_delay * attempt)
+            time.sleep(retry_delay)
 
 
 def get_engine():
