@@ -1138,5 +1138,265 @@
     "num_violations": 1,
     "evidence_path": "violations\\violation_20261024_230212.jpg",
     "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:34:47",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153447.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:34:50",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153450.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:34:53",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153453.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:34:56",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153456.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:34:59",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153459.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:02",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153502.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:05",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153505.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:08",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153508.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:12",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153512.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:15",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153515.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:18",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153518.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:21",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153521.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:25",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153525.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:28",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153528.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:31",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153531.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:34",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153534.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:37",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153537.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:40",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153540.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:43",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153543.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:46",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153546.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:50",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153550.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:53",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153553.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:56",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153556.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:35:59",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153559.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:36:02",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153602.jpg",
+    "acknowledged": false
+  },
+  {
+    "timestamp": "2026-10-26 15:36:06",
+    "camera_id": 22,
+    "camera_name": "entrance1",
+    "zone": "sairam",
+    "violation_type": "Litter Discarded",
+    "num_violations": 1,
+    "evidence_path": "violations\\violation_20261026_153606.jpg",
+    "acknowledged": false
   }
 ]

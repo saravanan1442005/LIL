@@ -34,6 +34,7 @@ def init_db(seed_admin: bool = True, seed_default_cameras: bool = True):
         Base.metadata.create_all(bind=conn)
         conn.commit()
         _ensure_visitor_columns(conn)
+        _ensure_camera_columns(conn)
 
         # Create HNSW vector index on Postgres
         if engine.dialect.name == "postgresql":
@@ -75,6 +76,7 @@ def init_db(seed_admin: bool = True, seed_default_cameras: bool = True):
                     location="Gate 1 (Visitor Access)",
                     stream_source="https://www.youtube.com/watch?v=QMN4_62A3As",
                     stream_type="YOUTUBE",
+                    purpose="VISITOR",
                     enabled=True,
                     fps=15,
                     resolution="1280x720"
@@ -84,6 +86,7 @@ def init_db(seed_admin: bool = True, seed_default_cameras: bool = True):
                     location="Perimeter Boulevard",
                     stream_source="https://www.youtube.com/watch?v=zMCea32gpmg",
                     stream_type="YOUTUBE",
+                    purpose="LITTER",
                     enabled=True,
                     fps=15,
                     resolution="1280x720"
@@ -93,6 +96,7 @@ def init_db(seed_admin: bool = True, seed_default_cameras: bool = True):
                     location="Local Station",
                     stream_source="0",
                     stream_type="WEBCAM",
+                    purpose="LITTER",
                     enabled=True,
                     fps=30,
                     resolution="640x480"
@@ -145,4 +149,15 @@ def _ensure_visitor_columns(conn):
     for name, definition in columns.items():
         if name not in existing:
             conn.execute(text(f"ALTER TABLE visitors ADD COLUMN {name} {definition}"))
+    conn.commit()
+
+
+def _ensure_camera_columns(conn):
+    """Add purpose metadata for separation of litter vs visitor workflows."""
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    existing = {column["name"] for column in inspector.get_columns("cameras")}
+    if "purpose" not in existing:
+        conn.execute(text("ALTER TABLE cameras ADD COLUMN purpose VARCHAR(20) NOT NULL DEFAULT 'LITTER'"))
     conn.commit()

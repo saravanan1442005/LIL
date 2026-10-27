@@ -122,6 +122,32 @@ def normalize_network_source(source):
 # ==============================================================================
 # GLOBAL AI & CAMERA STATE
 # ==============================================================================
+_VISITOR_ALERTS = []
+_VISITOR_ALERT_LOCK = threading.Lock()
+_VISITOR_LAST_ALERTS = {}
+
+
+def _add_visitor_alert(alert):
+    with _VISITOR_ALERT_LOCK:
+        _VISITOR_ALERTS.append(alert)
+        if len(_VISITOR_ALERTS) > 50:
+            del _VISITOR_ALERTS[:-50]
+
+
+def _consume_visitor_alerts():
+    with _VISITOR_ALERT_LOCK:
+        pending = list(_VISITOR_ALERTS)
+        _VISITOR_ALERTS.clear()
+        return pending
+
+
+def _visitor_camera_event_type(camera):
+    camera_text = " ".join(
+        str(camera.get(key, "")).lower() for key in ("name", "zone", "location")
+    )
+    return "EXIT" if "exit" in camera_text or "out" in camera_text else "ENTRY"
+
+
 class LiveMonitorState:
     def __init__(self):
         self.lock = threading.Lock()
@@ -213,6 +239,7 @@ class LiveMonitorState:
                     "name": c.name,
                     "source": c.stream_source,
                     "type": c.stream_type or "RTSP",
+                    "purpose": (c.purpose or "LITTER").upper(),
                     "enabled": c.enabled,
                     "zone": c.location or "Gate Zone"
                 })
@@ -222,7 +249,17 @@ class LiveMonitorState:
 
         if not cams:
             cfg = load_config()
-            cams = cfg.get("cameras", [])
+            cams = []
+            for item in cfg.get("cameras", []):
+                cams.append({
+                    "id": item.get("id"),
+                    "name": item.get("name"),
+                    "source": item.get("source"),
+                    "type": item.get("type", "RTSP"),
+                    "purpose": str(item.get("purpose", "LITTER")).upper(),
+                    "enabled": item.get("enabled", True),
+                    "zone": item.get("zone", "Gate Zone")
+                })
 
         with self.lock:
             self.cameras = cams
@@ -412,8 +449,88 @@ def anpr_worker_loop():
 # ==============================================================================
 # BACKGROUND CAMERA & DETECTION WORKER
 # ==============================================================================
+def visitor_camera_worker():
+    """Dedicated background worker for visitor recognition cameras only."""
+    while True:
+        try:
+            with state.lock:
+                cameras = state.cameras
+            visitor_cameras = [
+                cam for cam in cameras
+                if str(cam.get("purpose", "LITTER")).upper() == "VISITOR" and cam.get("enabled", True)
+            ]
+            if not visitor_cameras:
+                time.sleep(1.0)
+                continue
+
+            for cam in visitor_cameras:
+                try:
+                    cam_id = int(cam.get("id") or 0)
+                    if cam_id <= 0:
+                        continue
+                    session = get_session_factory()()
+                    cap = None
+                    try:
+                        from services.face_service import get_face_service
+
+                        source = str(cam.get("source") or "").strip()
+                        if not source:
+                            continue
+                        resolved_source = source
+                        if is_youtube_url(source):
+                            resolved_source, _ = resolve_stream_source(source, target_height=480)
+                        if not resolved_source:
+                            continue
+                        cap = cv2.VideoCapture(
+                            int(resolved_source) if resolved_source.isdigit() else resolved_source
+                        )
+                        if not cap.isOpened():
+                            continue
+                        ret, frame = cap.read()
+                        if not ret or frame is None:
+                            continue
+
+                        matches = get_face_service().recognize_face(session, frame, threshold=0.50, top_k=3)
+                        event_type = _visitor_camera_event_type(cam)
+                        now = time.time()
+                        for match in matches:
+                            visitor = match.get("visitor")
+                            if not visitor:
+                                continue
+                            visitor_id = int(visitor.get("id") or 0)
+                            alert_key = (cam_id, visitor_id, event_type)
+                            if now - _VISITOR_LAST_ALERTS.get(alert_key, 0) < 15:
+                                continue
+                            _VISITOR_LAST_ALERTS[alert_key] = now
+                            alert = {
+                                "camera_id": cam_id,
+                                "camera_name": cam.get("name", "Visitor Camera"),
+                                "gate_location": cam.get("location") or cam.get("zone") or "",
+                                "visitor_id": visitor_id,
+                                "visitor": visitor,
+                                "confidence": match.get("confidence"),
+                                "match_type": match.get("match_type", "FACE_INSIGHTFACE"),
+                                "event_type": event_type,
+                                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                "source": "FACE",
+                            }
+                            _add_visitor_alert(alert)
+                    finally:
+                        if cap is not None:
+                            cap.release()
+                        session.close()
+                except Exception as error:
+                    print(f"Visitor camera {cam.get('id')} error: {error}")
+                    continue
+            time.sleep(2.5)
+        except Exception as error:
+            print(f"Visitor camera worker error: {error}")
+            time.sleep(1.0)
+
+
 def camera_worker_loop():
     """Background worker continuously pulling frames, running YOLO and tracking."""
+    state.reload_cameras()
     state.open_camera()
     frame_count = 0
     fps_start = time.time()
@@ -450,7 +567,6 @@ def camera_worker_loop():
                 continue
             fail_count = 0
         elif cur_mode == "demo":
-            # Demo Simulation Feed
             if state.demo_frames:
                 if time.time() - last_demo_switch > 3.0:
                     demo_idx = (demo_idx + 1) % len(state.demo_frames)
@@ -462,7 +578,6 @@ def camera_worker_loop():
                             cv2.FONT_HERSHEY_SIMPLEX, 1.0, (200, 220, 240), 2)
             time.sleep(0.033)
         else:
-            # Connecting or transition placeholder canvas
             canvas = np.full((720, 1280, 3), (16, 23, 38), dtype=np.uint8)
             msg = f"{state.camera_title}: {state.status_message}".encode('ascii', 'replace').decode('ascii')
             cv2.putText(canvas, msg, (80, 320), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (16, 185, 129), 2)
@@ -483,7 +598,6 @@ def camera_worker_loop():
         with state.lock:
             state.raw_frame = frame.copy()
 
-        # Calculate FPS
         frame_count += 1
         elapsed = time.time() - fps_start
         if elapsed >= 1.0:
@@ -506,10 +620,15 @@ def camera_worker_loop():
             except queue.Full:
                 pass
 
-        # --- AI DETECTION & TRACKING PIPELINE (HIGH-PERFORMANCE) ---
-        if state.ai_enabled:
+        current_purpose = "LITTER"
+        with state.lock:
+            for cam in state.cameras:
+                if int(cam.get("id") or 0) == int(state.active_camera_id or 0):
+                    current_purpose = str(cam.get("purpose", "LITTER")).upper()
+                    break
+
+        if state.ai_enabled and current_purpose == "LITTER":
             try:
-                # Run YOLO every 2 frames for smooth real-time streaming, persisting tracks
                 if frame_idx % 2 == 0 or not last_tracks:
                     detections = state.detector.get_detections(frame)
                     tracks = state.tracker.update(detections, frame)
@@ -531,43 +650,39 @@ def camera_worker_loop():
 
                     if cls_name == "person":
                         people_c += 1
-                        color = (16, 185, 129)  # Emerald green
+                        color = (16, 185, 129)
                         label = f"Person #{t_id}"
                     else:
                         objects_c += 1
-                        color = (245, 158, 11)  # Amber
+                        color = (245, 158, 11)
                         label = f"{cls_name} #{t_id}"
 
                         for (p_id, obj_id), s in current_states.items():
                             if obj_id == t_id:
                                 if s == "STATIC":
-                                    color = (140, 150, 165)  # Calm gray for background items
+                                    color = (140, 150, 165)
                                     label = f"{cls_name} #{t_id} [Static]"
                                 elif s == "HELD":
-                                    color = (59, 130, 246)   # Blue when held/carried
+                                    color = (59, 130, 246)
                                     label += f" [{s}]"
                                 elif s in ("SEPARATING", "TRACKING"):
-                                    color = (249, 115, 22)   # Orange when separating
+                                    color = (249, 115, 22)
                                     label += f" [{s}]"
                                 break
 
                         if t_id in state.engine.active_violations:
-                            color = (239, 68, 68)  # Red alert
+                            color = (239, 68, 68)
                             label = f"⚠️ LITTER #{t_id}"
 
                     if state.show_boxes:
                         x1, y1, x2, y2 = map(int, ltrb)
-                        # Smooth rounded style corners
                         cv2.rectangle(display_frame, (x1, y1), (x2, y2), color, 2)
-                        
-                        # Label background tag
                         (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
                         cv2.rectangle(display_frame, (x1, max(0, y1 - 22)), (x1 + tw + 10, y1), color, -1)
                         cv2.putText(display_frame, label, (x1 + 5, max(12, y1 - 6)),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
 
                 if is_violating and state.auto_snap:
-                    # Automatically snap and persist annotated evidence screenshot
                     rec = alert_system.trigger_alert(
                         cam_id=state.active_camera_id or 1,
                         camera_name=state.camera_title or "ECOLIFEBUDDY Camera",
@@ -584,7 +699,6 @@ def camera_worker_loop():
             except Exception:
                 pass
 
-        # Check if alert banner should be displayed (active or within 3 seconds of alert)
         is_alert_active = is_violating or (time.time() - state.last_alert_time < 3.0)
 
         if is_alert_active and state.show_boxes:
@@ -594,7 +708,6 @@ def camera_worker_loop():
             cv2.putText(display_frame, "LITTERING DETECTED  *  EVIDENCE LOGGED", (max(10, w // 2 - 250), 35),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
 
-        # Update telemetry
         with state.lock:
             state.people_count = people_c
             state.object_count = objects_c
@@ -606,6 +719,8 @@ def camera_worker_loop():
 # Start background camera capture thread
 capture_thread = threading.Thread(target=camera_worker_loop, daemon=True)
 capture_thread.start()
+visitor_thread = threading.Thread(target=visitor_camera_worker, daemon=True)
+visitor_thread.start()
 anpr_thread = threading.Thread(target=anpr_worker_loop, daemon=True)
 anpr_thread.start()
 
@@ -1061,6 +1176,15 @@ def export_report():
 # ==============================================================================
 def start_server(port=5000):
     """Start Flask server and open user browser."""
+    def warm_face_recognition():
+        try:
+            from services.face_service import get_face_service
+            get_face_service()
+        except Exception as error:
+            app.logger.warning("Face recognition warm-up failed: %s", error)
+
+    threading.Thread(target=warm_face_recognition, daemon=True).start()
+
     def open_browser():
         time.sleep(1.2)
         url = f"http://127.0.0.1:{port}"

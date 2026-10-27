@@ -37,6 +37,9 @@ def create_camera():
     location = data.get("location", "").strip()
     stream_source = data.get("stream_source", "").strip()
     stream_type = data.get("stream_type", "RTSP").strip().upper()
+    purpose = str(data.get("purpose", "LITTER")).strip().upper()
+    if purpose not in {"LITTER", "VISITOR"}:
+        purpose = "LITTER"
     fps = data.get("fps", 15)
     resolution = data.get("resolution", "1280x720")
     enabled = bool(data.get("enabled", True))
@@ -51,6 +54,7 @@ def create_camera():
             location=location,
             stream_source=stream_source,
             stream_type=stream_type,
+            purpose=purpose,
             fps=fps,
             resolution=resolution,
             enabled=enabled,
@@ -103,6 +107,9 @@ def update_camera(camera_id: int):
             cam.stream_source = data["stream_source"].strip()
         if "stream_type" in data:
             cam.stream_type = data["stream_type"].strip().upper()
+        if "purpose" in data:
+            purpose = str(data["purpose"]).strip().upper()
+            cam.purpose = purpose if purpose in {"LITTER", "VISITOR"} else "LITTER"
         if "fps" in data:
             cam.fps = int(data["fps"])
         if "resolution" in data:

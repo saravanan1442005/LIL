@@ -126,6 +126,7 @@ class Camera(Base):
     location = Column(String(150), nullable=True)
     stream_source = Column(String(500), nullable=False)  # RTSP URL, webcam index '0', video file path
     stream_type = Column(String(20), nullable=False, default="RTSP")  # RTSP, WEBCAM, FILE, YOUTUBE
+    purpose = Column(String(20), nullable=False, default="LITTER")  # LITTER or VISITOR
     enabled = Column(Boolean, default=True, nullable=False)
     fps = Column(Integer, default=15)
     resolution = Column(String(20), default="1280x720")
@@ -143,6 +144,7 @@ class Camera(Base):
             "location": self.location,
             "stream_source": self.stream_source,
             "stream_type": self.stream_type,
+            "purpose": self.purpose or "LITTER",
             "enabled": self.enabled,
             "fps": self.fps,
             "resolution": self.resolution,

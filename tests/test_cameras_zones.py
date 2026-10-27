@@ -34,6 +34,7 @@ def test_create_update_delete_camera(client, admin_headers):
         "location": "North Wall",
         "stream_source": "rtsp://192.168.1.200:554/live",
         "stream_type": "RTSP",
+        "purpose": "VISITOR",
         "fps": 20,
         "resolution": "1920x1080",
         "enabled": True,
@@ -46,6 +47,7 @@ def test_create_update_delete_camera(client, admin_headers):
     get_res = client.get(f"/api/v2/cameras/{cam_id}")
     assert get_res.status_code == 200
     assert get_res.get_json()["camera"]["name"] == "Test Perimeter Camera"
+    assert get_res.get_json()["camera"]["purpose"] == "VISITOR"
 
     # 3. Create a zone with tripwire line
     new_zone = {

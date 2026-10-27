@@ -66,6 +66,25 @@ def _save_photo(upload) -> str:
     return f"visitor_photos/{stored}"
 
 
+def _delete_saved_photo(relative_path: str | None) -> None:
+    if not relative_path:
+        return
+    photo_path = Path(current_app.root_path) / "data" / relative_path
+    try:
+        photo_path.unlink(missing_ok=True)
+    except OSError:
+        current_app.logger.warning("Unable to remove visitor photo: %s", relative_path)
+
+
+@registration_bp.route("/camera-alerts", methods=["GET"])
+@roles_required("Admin", "Security Officer")
+def camera_alerts():
+    """Return any pending face-recognition alerts for the guard app polling loop."""
+    from web_server import _consume_visitor_alerts
+    alerts = _consume_visitor_alerts()
+    return jsonify({"alerts": alerts})
+
+
 @registration_bp.route("/photos/<path:filename>", methods=["GET"])
 @roles_required("Admin", "Security Officer")
 def visitor_photo(filename):
@@ -140,6 +159,38 @@ def register_visitor():
     try:
         existing = session.query(Visitor).filter(Visitor.phone_hash == phone_hash, Visitor.status != "REDACTED").first()
         if existing:
+            replacement_photo = request.files.get("photo")
+            if replacement_photo:
+                import cv2
+                replacement_path = _save_photo(replacement_photo)
+                replacement_file = Path(current_app.root_path) / "data" / replacement_path
+                replacement_image = cv2.imread(str(replacement_file))
+                if replacement_image is None or get_face_service().get_primary_face_embedding(replacement_image)[0] is None:
+                    _delete_saved_photo(replacement_path)
+                    return jsonify({
+                        "error": "No clear face was detected. Upload a well-lit, front-facing photo with one visible face.",
+                        "face_enrolled": False,
+                    }), 422
+                existing.consent_status = "GRANTED"
+                session.commit()
+                try:
+                    if not get_face_service().enroll_visitor_face(session, existing.id, replacement_image):
+                        return jsonify({
+                            "error": "Face enrollment failed. The photo was not retained.",
+                            "face_enrolled": False,
+                        }), 422
+                except Exception as error:
+                    current_app.logger.warning("Replacement face enrollment failed: %s", error)
+                    return jsonify({
+                        "error": "Face enrollment failed. The photo was not retained.",
+                        "face_enrolled": False,
+                    }), 422
+                finally:
+                    _delete_saved_photo(replacement_path)
+                return jsonify({
+                    "visitor": existing.to_dict(),
+                    "message": "Visitor photo and face enrollment updated successfully.",
+                }), 200
             return jsonify({"error": "A visitor with this phone number already exists.", "visitor": existing.to_dict()}), 409
 
         vehicle_number = _normalize_vehicle_number(data.get("vehicle_number"))
@@ -159,27 +210,44 @@ def register_visitor():
             status="ACTIVE",
         )
         photo = request.files.get("photo")
+        face_image = None
+        photo_path = None
         if photo:
-            visitor.profile_photo_path = _save_photo(photo)
+            photo_path = _save_photo(photo)
+            import cv2
+            face_image = cv2.imread(str(Path(current_app.root_path) / "data" / photo_path))
+            if face_image is None or get_face_service().get_primary_face_embedding(face_image)[0] is None:
+                _delete_saved_photo(photo_path)
+                return jsonify({
+                    "error": "No clear face was detected. Upload a well-lit, front-facing photo with one visible face.",
+                    "face_enrolled": False,
+                }), 422
         session.add(visitor)
         session.commit()
 
-        if visitor.profile_photo_path:
-            photo_path = Path(current_app.root_path) / "data" / visitor.profile_photo_path
-            import cv2
-            image = cv2.imread(str(photo_path))
+        if photo_path:
+            image = face_image
             if image is not None:
-                # 1. Appearance Re-ID embedding
-                reid_emb = get_reid_extractor().extract_embedding(image)
-                get_vector_store(session).add_embedding(visitor.id, reid_emb, embedding_type="reid", confidence=1.0)
-                
-                # 2. InsightFace 512-d ArcFace facial embedding
                 try:
+                    # 1. Appearance Re-ID embedding
+                    reid_emb = get_reid_extractor().extract_embedding(image)
+                    get_vector_store(session).add_embedding(visitor.id, reid_emb, embedding_type="reid", confidence=1.0)
+
+                    # 2. InsightFace 512-d ArcFace facial embedding
                     face_ok = get_face_service().enroll_visitor_face(session, visitor.id, image)
-                    if face_ok:
-                        visitor.face_enrolled = True
-                except Exception as fe:
-                    current_app.logger.warning("Face enrollment note: %s", fe)
+                    if not face_ok:
+                        session.delete(visitor)
+                        session.commit()
+                        return jsonify({"error": "Face enrollment failed. The photo was not retained."}), 422
+                    visitor.face_enrolled = True
+                except Exception as error:
+                    current_app.logger.warning("Visitor embedding enrollment failed: %s", error)
+                    session.rollback()
+                    session.delete(visitor)
+                    session.commit()
+                    return jsonify({"error": "Face enrollment failed. The photo was not retained."}), 422
+                finally:
+                    _delete_saved_photo(photo_path)
 
                 visitor.plate_enrolled = bool(visitor.vehicle_number)
                 session.commit()
@@ -472,14 +540,15 @@ def enroll_face(visitor_id: int):
         if image is None:
             return jsonify({"error": "The image could not be decoded."}), 400
 
-        # Save profile photo if missing or updating
+        # Use a temporary file only while extracting the embedding.
         upload.seek(0)
-        visitor.profile_photo_path = _save_photo(upload)
-        session.commit()
+        photo_path = _save_photo(upload)
 
         success = get_face_service().enroll_visitor_face(session, visitor.id, image)
         if not success:
+            _delete_saved_photo(photo_path)
             return jsonify({"error": "No clear face detected in the uploaded photo."}), 400
+        _delete_saved_photo(photo_path)
 
         log_audit_event(session, "ENROLL_FACE", "Visitor", str(visitor_id), details={"model": "InsightFace ArcFace"})
         return jsonify({
@@ -488,4 +557,3 @@ def enroll_face(visitor_id: int):
         })
     finally:
         session.close()
-
