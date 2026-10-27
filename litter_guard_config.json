@@ -21,12 +21,12 @@
     },
     {
       "id": 3,
-      "name": "Avenida Atlantica (Beach)",
+      "name": "Visitor Gate 1 (Entry)",
       "source": "https://www.youtube.com/watch?v=5Xl6pSgiy3A",
       "type": "YOUTUBE",
       "purpose": "VISITOR",
       "enabled": true,
-      "zone": "Coastal Boulevard"
+      "zone": "Visitor Entry Gate"
     },
     {
       "id": 4,
@@ -36,6 +36,15 @@
       "purpose": "LITTER",
       "enabled": true,
       "zone": "Local Station"
+    },
+    {
+      "id": 5,
+      "name": "Visitor Gate 1 (Exit)",
+      "source": "https://www.youtube.com/watch?v=5Xl6pSgiy3A",
+      "type": "YOUTUBE",
+      "purpose": "VISITOR",
+      "enabled": false,
+      "zone": "Visitor Exit Gate"
     }
   ],
   "alert_settings": {

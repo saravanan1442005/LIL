@@ -16,6 +16,7 @@ class CameraStream:
         self.source = camera_config["source"]
         self.cam_type = camera_config.get("type", "RTSP")
         self.enabled = camera_config.get("enabled", True)
+        self.purpose = str(camera_config.get("purpose", "LITTER")).strip().upper()
         self.zone = camera_config.get("zone", "General Area")
 
         self.cap = None
@@ -178,6 +179,7 @@ class CameraStream:
             "fps": round(self.fps, 1),
             "error": self.error_message,
             "violations": self.violation_count,
+            "purpose": self.purpose,
             "zone": self.zone,
         }
 

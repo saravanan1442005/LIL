@@ -80,7 +80,10 @@ def _delete_saved_photo(relative_path: str | None) -> None:
 @roles_required("Admin", "Security Officer")
 def camera_alerts():
     """Return any pending face-recognition alerts for the guard app polling loop."""
-    from web_server import _consume_visitor_alerts
+    from web_server import _consume_visitor_alerts, _VISITOR_ALERTS, _VISITOR_ALERT_LOCK
+    if request.args.get("peek") in ("true", "1"):
+        with _VISITOR_ALERT_LOCK:
+            return jsonify({"alerts": list(_VISITOR_ALERTS)})
     alerts = _consume_visitor_alerts()
     return jsonify({"alerts": alerts})
 

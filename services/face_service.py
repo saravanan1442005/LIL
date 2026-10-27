@@ -23,7 +23,23 @@ def get_face_app():
         try:
             from insightface.app import FaceAnalysis
 
-            models_root = os.getenv("FACE_MODEL_PATH", "d:/LIL/face_recognition/models")
+            workspace_root = Path(__file__).resolve().parent.parent
+            default_models_root = str(workspace_root / "face_recognition" / "models")
+            models_root = os.getenv("FACE_MODEL_PATH", default_models_root)
+
+            # Auto-extract buffalo_sc.zip if model folder is missing
+            target_model_dir = Path(models_root) / "models" / "buffalo_sc"
+            zip_file = Path(models_root) / "models" / "buffalo_sc.zip"
+            if not target_model_dir.exists() and zip_file.exists():
+                try:
+                    import zipfile
+                    target_model_dir.mkdir(parents=True, exist_ok=True)
+                    with zipfile.ZipFile(zip_file, "r") as z:
+                        z.extractall(target_model_dir)
+                    logger.info("Extracted buffalo_sc model from %s to %s", zip_file, target_model_dir)
+                except Exception as zip_err:
+                    logger.warning("Could not extract buffalo_sc.zip: %s", zip_err)
+
             _face_app = FaceAnalysis(
                 name="buffalo_sc",
                 root=models_root,
@@ -102,6 +118,13 @@ class FaceService:
         if not embedding:
             logger.warning("No face detected in photo for visitor_id=%s", visitor_id)
             return False
+
+        # Clean up any existing face embeddings for this visitor
+        session.query(VisitorEmbedding).filter(
+            VisitorEmbedding.visitor_id == visitor_id,
+            VisitorEmbedding.embedding_type == "face"
+        ).delete()
+        session.commit()
 
         # Persist embedding vector to Supabase
         vstore = get_vector_store(session)

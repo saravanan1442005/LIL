@@ -1,4 +1,10 @@
 # web_server.py — Simple, Modern ECOLIFEBUDDY AI Surveillance Server
+import sys
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 import cv2
 import numpy as np
 import time
@@ -449,80 +455,177 @@ def anpr_worker_loop():
 # ==============================================================================
 # BACKGROUND CAMERA & DETECTION WORKER
 # ==============================================================================
+_VISITOR_CAPS = {}
+
 def visitor_camera_worker():
-    """Dedicated background worker for visitor recognition cameras only."""
+    """Dedicated background worker for visitor recognition cameras only.
+    Processes only cameras with purpose='VISITOR', runs InsightFace recognition,
+    matches against Supabase/PostgreSQL vector embeddings, auto-records EXIT events,
+    and queues real-time pending alerts for the guard app to poll.
+    Does NOT run YOLO litter detection.
+    """
     while True:
         try:
-            with state.lock:
-                cameras = state.cameras
-            visitor_cameras = [
-                cam for cam in cameras
-                if str(cam.get("purpose", "LITTER")).upper() == "VISITOR" and cam.get("enabled", True)
-            ]
+            # 1. Fetch enabled VISITOR cameras from DB or state
+            visitor_cameras = []
+            session = get_session_factory()()
+            try:
+                from database.models import Camera
+                db_cams = session.query(Camera).filter(
+                    Camera.enabled == True,
+                    Camera.purpose == "VISITOR"
+                ).all()
+                for c in db_cams:
+                    visitor_cameras.append({
+                        "id": c.id,
+                        "name": c.name,
+                        "source": c.stream_source,
+                        "type": c.stream_type,
+                        "purpose": "VISITOR",
+                        "enabled": c.enabled,
+                        "location": c.location,
+                        "zone": c.location or "Gate Area",
+                    })
+            except Exception as e:
+                with state.lock:
+                    cameras = state.cameras
+                visitor_cameras = [
+                    cam for cam in cameras
+                    if str(cam.get("purpose", "LITTER")).upper() == "VISITOR" and cam.get("enabled", True)
+                ]
+            finally:
+                session.close()
+
             if not visitor_cameras:
-                time.sleep(1.0)
+                for cap_id, cap_obj in list(_VISITOR_CAPS.items()):
+                    try:
+                        cap_obj.release()
+                    except Exception:
+                        pass
+                _VISITOR_CAPS.clear()
+                time.sleep(1.5)
                 continue
 
-            for cam in visitor_cameras:
-                try:
-                    cam_id = int(cam.get("id") or 0)
-                    if cam_id <= 0:
-                        continue
-                    session = get_session_factory()()
-                    cap = None
+            current_ids = {int(cam.get("id") or 0) for cam in visitor_cameras}
+            for cap_id in list(_VISITOR_CAPS.keys()):
+                if cap_id not in current_ids:
                     try:
-                        from services.face_service import get_face_service
+                        _VISITOR_CAPS[cap_id].release()
+                    except Exception:
+                        pass
+                    del _VISITOR_CAPS[cap_id]
 
-                        source = str(cam.get("source") or "").strip()
-                        if not source:
-                            continue
+            for cam in visitor_cameras:
+                cam_id = int(cam.get("id") or 0)
+                if cam_id <= 0:
+                    continue
+
+                frame = None
+                with state.lock:
+                    active_id = int(state.active_camera_id or 0)
+                    if active_id == cam_id and state.raw_frame is not None:
+                        frame = state.raw_frame.copy()
+
+                if active_id == cam_id:
+                    if cam_id in _VISITOR_CAPS:
+                        try:
+                            _VISITOR_CAPS[cam_id].release()
+                        except Exception:
+                            pass
+                        del _VISITOR_CAPS[cam_id]
+
+                if frame is None:
+                    source = str(cam.get("source") or "").strip()
+                    if not source:
+                        continue
+                    cap = _VISITOR_CAPS.get(cam_id)
+                    if cap is None or not cap.isOpened():
                         resolved_source = source
                         if is_youtube_url(source):
                             resolved_source, _ = resolve_stream_source(source, target_height=480)
                         if not resolved_source:
                             continue
-                        cap = cv2.VideoCapture(
-                            int(resolved_source) if resolved_source.isdigit() else resolved_source
-                        )
-                        if not cap.isOpened():
-                            continue
-                        ret, frame = cap.read()
-                        if not ret or frame is None:
+                        try:
+                            cap = cv2.VideoCapture(
+                                int(resolved_source) if str(resolved_source).isdigit() else resolved_source
+                            )
+                            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                            _VISITOR_CAPS[cam_id] = cap
+                        except Exception as open_err:
+                            print(f"Could not open visitor camera {cam_id}: {open_err}")
                             continue
 
-                        matches = get_face_service().recognize_face(session, frame, threshold=0.50, top_k=3)
-                        event_type = _visitor_camera_event_type(cam)
-                        now = time.time()
-                        for match in matches:
-                            visitor = match.get("visitor")
-                            if not visitor:
-                                continue
-                            visitor_id = int(visitor.get("id") or 0)
-                            alert_key = (cam_id, visitor_id, event_type)
-                            if now - _VISITOR_LAST_ALERTS.get(alert_key, 0) < 15:
-                                continue
-                            _VISITOR_LAST_ALERTS[alert_key] = now
-                            alert = {
-                                "camera_id": cam_id,
-                                "camera_name": cam.get("name", "Visitor Camera"),
-                                "gate_location": cam.get("location") or cam.get("zone") or "",
-                                "visitor_id": visitor_id,
-                                "visitor": visitor,
-                                "confidence": match.get("confidence"),
-                                "match_type": match.get("match_type", "FACE_INSIGHTFACE"),
-                                "event_type": event_type,
-                                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                                "source": "FACE",
-                            }
-                            _add_visitor_alert(alert)
-                    finally:
-                        if cap is not None:
+                    if cap and cap.isOpened():
+                        ret, f = cap.read()
+                        if ret and f is not None and getattr(f, "size", 0) > 0:
+                            frame = f
+                        else:
                             cap.release()
-                        session.close()
-                except Exception as error:
-                    print(f"Visitor camera {cam.get('id')} error: {error}")
+                            _VISITOR_CAPS.pop(cam_id, None)
+                            continue
+
+                if frame is None or getattr(frame, "size", 0) == 0:
                     continue
-            time.sleep(2.5)
+
+                session = get_session_factory()()
+                try:
+                    from services.face_service import get_face_service
+                    from services.visitor_service import is_visitor_present, record_gate_event
+
+                    fs = get_face_service()
+                    if not fs.is_ready():
+                        continue
+
+                    matches = fs.recognize_face(session, frame, threshold=0.50, top_k=3)
+                    event_type = _visitor_camera_event_type(cam)
+                    now = time.time()
+
+                    for match in matches:
+                        visitor = match.get("visitor")
+                        if not visitor:
+                            continue
+                        visitor_id = int(visitor.get("id") or 0)
+                        alert_key = (cam_id, visitor_id, event_type)
+                        if now - _VISITOR_LAST_ALERTS.get(alert_key, 0) < 15:
+                            continue
+                        _VISITOR_LAST_ALERTS[alert_key] = now
+
+                        auto_logged = False
+                        if event_type == "EXIT":
+                            try:
+                                if is_visitor_present(session, visitor_id):
+                                    record_gate_event(
+                                        session,
+                                        visitor_id=visitor_id,
+                                        event_type="EXIT",
+                                        source="FACE",
+                                        camera_id=cam_id,
+                                        confidence=match.get("confidence"),
+                                    )
+                                    session.commit()
+                                    auto_logged = True
+                                    print(f"🚪 Auto-recorded EXIT for visitor {visitor.get('full_name')} (ID {visitor_id}) via exit camera {cam_id}")
+                            except Exception as rec_err:
+                                print(f"Note on auto-exit event creation: {rec_err}")
+
+                        alert = {
+                            "camera_id": cam_id,
+                            "camera_name": cam.get("name", "Visitor Camera"),
+                            "gate_location": cam.get("location") or cam.get("zone") or "",
+                            "visitor_id": visitor_id,
+                            "visitor": visitor,
+                            "confidence": match.get("confidence"),
+                            "match_type": match.get("match_type", "FACE_INSIGHTFACE"),
+                            "event_type": event_type,
+                            "auto_logged": auto_logged,
+                            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                            "source": "FACE",
+                        }
+                        _add_visitor_alert(alert)
+                finally:
+                    session.close()
+
+            time.sleep(2.0)
         except Exception as error:
             print(f"Visitor camera worker error: {error}")
             time.sleep(1.0)
@@ -699,14 +802,22 @@ def camera_worker_loop():
             except Exception:
                 pass
 
-        is_alert_active = is_violating or (time.time() - state.last_alert_time < 3.0)
-
-        if is_alert_active and state.show_boxes:
-            overlay = display_frame.copy()
-            cv2.rectangle(overlay, (0, 0), (w, 54), (220, 38, 38), -1)
-            cv2.addWeighted(overlay, 0.85, display_frame, 0.15, 0, display_frame)
-            cv2.putText(display_frame, "LITTERING DETECTED  *  EVIDENCE LOGGED", (max(10, w // 2 - 250), 35),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
+        if current_purpose == "LITTER":
+            is_alert_active = is_violating or (time.time() - state.last_alert_time < 3.0)
+            if is_alert_active and state.show_boxes:
+                overlay = display_frame.copy()
+                cv2.rectangle(overlay, (0, 0), (w, 54), (220, 38, 38), -1)
+                cv2.addWeighted(overlay, 0.85, display_frame, 0.15, 0, display_frame)
+                cv2.putText(display_frame, "LITTERING DETECTED  *  EVIDENCE LOGGED", (max(10, w // 2 - 250), 35),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
+        else:
+            is_alert_active = False
+            if state.show_boxes:
+                overlay = display_frame.copy()
+                cv2.rectangle(overlay, (0, 0), (w, 42), (15, 23, 42), -1)
+                cv2.addWeighted(overlay, 0.75, display_frame, 0.25, 0, display_frame)
+                cv2.putText(display_frame, "VISITOR RECOGNITION CAMERA  *  FACIAL AI ACTIVE", (max(10, w // 2 - 270), 28),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.60, (52, 211, 153), 2, cv2.LINE_AA)
 
         with state.lock:
             state.people_count = people_c

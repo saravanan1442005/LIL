@@ -11,6 +11,14 @@ from services.audit_service import log_audit_event
 cameras_bp = Blueprint("cameras", __name__, url_prefix="/api/v2")
 
 
+def _notify_camera_change():
+    try:
+        from web_server import state
+        state.reload_cameras()
+    except Exception:
+        pass
+
+
 # ---------------------------------------------------------------------------
 # CAMERAS CRUD
 # ---------------------------------------------------------------------------
@@ -67,9 +75,10 @@ def create_camera():
             action="CREATE_CAMERA",
             target_type="Camera",
             target_id=str(cam.id),
-            details={"name": name, "stream_type": stream_type, "location": location}
+            details={"name": name, "stream_type": stream_type, "location": location, "purpose": purpose}
         )
 
+        _notify_camera_change()
         return jsonify({"camera": cam.to_dict()}), 201
     finally:
         session.close()
@@ -127,6 +136,7 @@ def update_camera(camera_id: int):
             details=data
         )
 
+        _notify_camera_change()
         return jsonify({"camera": cam.to_dict()})
     finally:
         session.close()
@@ -153,6 +163,7 @@ def delete_camera(camera_id: int):
             details={"name": cam_name}
         )
 
+        _notify_camera_change()
         return jsonify({"message": f"Camera '{cam_name}' deleted successfully."})
     finally:
         session.close()

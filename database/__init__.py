@@ -101,7 +101,17 @@ def init_db(seed_admin: bool = True, seed_default_cameras: bool = True):
                     fps=30,
                     resolution="640x480"
                 )
-                session.add_all([c1, c2, c3])
+                c4 = Camera(
+                    name="Main Exit Gate",
+                    location="Gate 1 (Visitor Exit)",
+                    stream_source="https://www.youtube.com/watch?v=5Xl6pSgiy3A",
+                    stream_type="YOUTUBE",
+                    purpose="VISITOR",
+                    enabled=True,
+                    fps=15,
+                    resolution="1280x720"
+                )
+                session.add_all([c1, c2, c3, c4])
                 session.commit()
 
                 # Seed initial zones for Camera 1
