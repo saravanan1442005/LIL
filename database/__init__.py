@@ -35,6 +35,7 @@ def init_db(seed_admin: bool = True, seed_default_cameras: bool = True):
         conn.commit()
         _ensure_visitor_columns(conn)
         _ensure_camera_columns(conn)
+        _ensure_visitor_entry_columns(conn)
 
         # Create HNSW vector index on Postgres
         if engine.dialect.name == "postgresql":
@@ -171,3 +172,17 @@ def _ensure_camera_columns(conn):
     if "purpose" not in existing:
         conn.execute(text("ALTER TABLE cameras ADD COLUMN purpose VARCHAR(20) NOT NULL DEFAULT 'LITTER'"))
     conn.commit()
+
+
+def _ensure_visitor_entry_columns(conn):
+    """Add expected_duration_minutes to visitor_entries table if missing."""
+    from sqlalchemy import inspect
+
+    inspector = inspect(conn)
+    try:
+        existing = {column["name"] for column in inspector.get_columns("visitor_entries")}
+        if "expected_duration_minutes" not in existing:
+            conn.execute(text("ALTER TABLE visitor_entries ADD COLUMN expected_duration_minutes INTEGER DEFAULT 60"))
+            conn.commit()
+    except Exception as e:
+        logger.warning("Could not verify visitor_entries columns: %s", e)

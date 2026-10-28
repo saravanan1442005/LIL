@@ -313,9 +313,25 @@ class VisitorEntry(Base):
     guard_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     confirmed = Column(Boolean, default=False, nullable=False)
     snapshot_path = Column(String(500), nullable=True)
+    expected_duration_minutes = Column(Integer, nullable=True, default=60)
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
 
     visitor = relationship("Visitor")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "visitor_id": self.visitor_id,
+            "camera_id": self.camera_id,
+            "event_type": self.event_type,
+            "source": self.source,
+            "confidence": self.confidence,
+            "guard_user_id": self.guard_user_id,
+            "confirmed": self.confirmed,
+            "snapshot_path": self.snapshot_path,
+            "expected_duration_minutes": self.expected_duration_minutes,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+        }
 
 
 class PlateRead(Base):

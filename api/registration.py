@@ -88,6 +88,163 @@ def camera_alerts():
     return jsonify({"alerts": alerts})
 
 
+@registration_bp.route("/kiosk/voice-parse", methods=["POST"])
+def voice_parse():
+    """Parse visitor speech into structured details via Gemini or fast local NLP."""
+    data = request.get_json(silent=True) or {}
+    transcript = str(data.get("transcript", "")).strip()
+    language = str(data.get("language", "ta-IN")).strip()
+
+    from services.voice_agent_service import extract_visitor_details_from_speech
+    extracted = extract_visitor_details_from_speech(transcript, language=language)
+    return jsonify({"extracted": extracted})
+
+
+@registration_bp.route("/kiosk/voice-audio", methods=["POST"])
+def voice_audio():
+    """Receive recorded WAV audio from tablet microphone and transcribe via server-side Google STT."""
+    language = request.form.get("language", "ta-IN")
+    audio_file = request.files.get("audio")
+
+    if not audio_file:
+        data = request.get_json(silent=True) or {}
+        language = data.get("language", "ta-IN")
+        audio_b64 = data.get("audio_base64", "")
+        if audio_b64:
+            import base64
+            if "," in audio_b64:
+                audio_b64 = audio_b64.split(",", 1)[1]
+            raw_bytes = base64.b64decode(audio_b64)
+        else:
+            return jsonify({"error": "No audio file or audio_base64 provided"}), 400
+    else:
+        raw_bytes = audio_file.read()
+
+    from services.voice_agent_service import transcribe_and_extract_from_audio_bytes
+    extracted = transcribe_and_extract_from_audio_bytes(raw_bytes, language=language)
+    return jsonify({"extracted": extracted, "transcript": extracted.get("raw_transcript", "")})
+
+
+@registration_bp.route("/kiosk/tts", methods=["GET"])
+def kiosk_tts():
+    """Synthesize Tamil or English speech into natural MP3 audio with disk caching."""
+    text = request.args.get("text", "").strip()
+    lang = request.args.get("lang", "ta").strip()
+    if not text:
+        return jsonify({"error": "text is required"}), 400
+
+    from services.voice_agent_service import generate_tts_audio_bytes
+    audio_bytes = generate_tts_audio_bytes(text, lang=lang)
+    if not audio_bytes:
+        return jsonify({"error": "TTS audio generation failed"}), 500
+
+    from flask import Response
+    return Response(audio_bytes, mimetype="audio/mpeg", headers={"Cache-Control": "public, max-age=86400"})
+
+
+@registration_bp.route("/kiosk/voice-checkin", methods=["POST"])
+def voice_checkin():
+    """Direct kiosk check-in: accepts visitor details, creates/matches visitor, logs entry with duration."""
+    data = request.get_json(silent=True) or {}
+    full_name = str(data.get("name") or data.get("full_name") or "Visitor").strip()
+    phone = _normalize_phone(str(data.get("phone", "")))
+    company = data.get("company")
+    category = data.get("category") or data.get("purpose") or "Visitor"
+    expected_duration = int(data.get("expected_duration_minutes") or 30)
+
+    session: Session = get_session_factory()()
+    try:
+        visitor = None
+        if len(phone) >= 10:
+            p_hash = _phone_hash(phone)
+            visitor = session.query(Visitor).filter(Visitor.phone_hash == p_hash, Visitor.status == "ACTIVE").first()
+
+        if not visitor:
+            # Create new visitor record
+            import uuid
+            visitor = Visitor(
+                visitor_code=generate_visitor_code(session),
+                full_name=full_name,
+                phone_number=phone if len(phone) >= 10 else None,
+                phone_hash=_phone_hash(phone) if len(phone) >= 10 else None,
+                phone_last4=phone[-4:] if len(phone) >= 4 else None,
+                company=company,
+                category=category,
+                status="ACTIVE",
+            )
+            session.add(visitor)
+            session.commit()
+        else:
+            if company and not visitor.company:
+                visitor.company = company
+            if category and visitor.category == "Unknown":
+                visitor.category = category
+            session.commit()
+
+        photo_b64 = data.get("photo_base64")
+        if photo_b64 and visitor:
+            try:
+                import base64
+                import cv2
+                import numpy as np
+                if "," in photo_b64:
+                    photo_b64 = photo_b64.split(",", 1)[1]
+                img_bytes = base64.b64decode(photo_b64)
+                arr = np.frombuffer(img_bytes, dtype=np.uint8)
+                img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+                if img is not None:
+                    visitor.consent_status = "GRANTED"
+                    session.commit()
+                    get_face_service().enroll_visitor_face(session, visitor.id, img)
+            except Exception as e:
+                current_app.logger.warning("Kiosk face capture enrollment skipped: %s", e)
+
+        # Check if already present; if not, record ENTRY
+        if not is_visitor_present(session, visitor.id):
+            entry = record_gate_event(
+                session,
+                visitor_id=visitor.id,
+                event_type="ENTRY",
+                source="KIOSK",
+                expected_duration_minutes=expected_duration,
+            )
+            log_audit_event(session, "VOICE_KIOSK_ENTRY", "Visitor", str(visitor.id), details={
+                "source": "VOICE_KIOSK",
+                "expected_duration_minutes": expected_duration,
+                "entry_id": entry.id
+            })
+            return jsonify({
+                "status": "CHECKED_IN",
+                "event_type": "ENTRY",
+                "visitor": visitor.to_dict(),
+                "expected_duration_minutes": expected_duration,
+                "message": f"வருகை பதிவு செய்யப்பட்டது ({expected_duration} நிமிடம் அனுமதிக்கப்பட்டுள்ளது)."
+            }), 201
+        else:
+            # If already present, treat as auto-EXIT check
+            exit_entry = record_gate_event(
+                session,
+                visitor_id=visitor.id,
+                event_type="EXIT",
+                source="KIOSK",
+            )
+            log_audit_event(session, "VOICE_KIOSK_EXIT", "Visitor", str(visitor.id), details={
+                "source": "VOICE_KIOSK",
+                "exit_id": exit_entry.id
+            })
+            return jsonify({
+                "status": "CHECKED_OUT",
+                "event_type": "EXIT",
+                "visitor": visitor.to_dict(),
+                "message": "வெளியேறுதல் பதிவு செய்யப்பட்டது. நன்றி!"
+            }), 200
+    except Exception as e:
+        session.rollback()
+        return jsonify({"error": str(e)}), 400
+    finally:
+        session.close()
+
+
 @registration_bp.route("/photos/<path:filename>", methods=["GET"])
 @roles_required("Admin", "Security Officer")
 def visitor_photo(filename):
@@ -409,11 +566,12 @@ def confirm_entry():
                 confidence=data.get("confidence"),
                 snapshot_path=data.get("snapshot_path"),
                 user_id=g.current_user.get("user_id"),
+                expected_duration_minutes=data.get("expected_duration_minutes") or 60,
             )
         except (LookupError, ValueError) as error:
             return jsonify({"error": str(error)}), 409
         log_audit_event(session, "CONFIRM_VISITOR_ENTRY", "Visitor", str(visitor.id), details={"source": source, "entry_id": entry.id})
-        return jsonify({"entry_id": entry.id, "visitor": visitor.to_dict()}), 201
+        return jsonify({"entry_id": entry.id, "visitor": visitor.to_dict(), "expected_duration_minutes": entry.expected_duration_minutes}), 201
     finally:
         session.close()
 

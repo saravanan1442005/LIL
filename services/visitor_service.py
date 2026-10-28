@@ -54,12 +54,13 @@ def record_gate_event(
     confidence: Optional[float] = None,
     snapshot_path: Optional[str] = None,
     user_id: Optional[int] = None,
+    expected_duration_minutes: Optional[int] = 60,
 ) -> VisitorEntry:
     """Persist a confirmed entry/exit event and update the visitor's presence."""
     event_type = event_type.upper()
     source = source.upper()
-    if any(k in source for k in ["GUARD", "MANUAL", "CONFIRM", "BUTTON"]):
-        source = "MANUAL"
+    if any(k in source for k in ["GUARD", "MANUAL", "CONFIRM", "BUTTON", "KIOSK", "VOICE"]):
+        source = "KIOSK" if "KIOSK" in source or "VOICE" in source else "MANUAL"
     elif "FACE" in source:
         source = "FACE"
     elif any(k in source for k in ["PLATE", "ANPR"]):
@@ -68,7 +69,7 @@ def record_gate_event(
         source = "PHONE"
     elif "REID" in source:
         source = "REID"
-    elif source not in {"FACE", "PLATE", "REID", "PHONE", "MANUAL"}:
+    elif source not in {"FACE", "PLATE", "REID", "PHONE", "MANUAL", "KIOSK"}:
         source = "MANUAL"
 
     if event_type not in {"ENTRY", "EXIT"}:
@@ -95,6 +96,7 @@ def record_gate_event(
         guard_user_id=user_id,
         confirmed=True,
         snapshot_path=snapshot_path,
+        expected_duration_minutes=expected_duration_minutes or 60,
     )
     visitor.last_seen = datetime.datetime.now(datetime.timezone.utc)
     if event_type == "ENTRY":

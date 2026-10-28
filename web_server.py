@@ -625,6 +625,65 @@ def visitor_camera_worker():
                 finally:
                     session.close()
 
+            # Check for overdue/overstayed visitors (entered and exceeded expected duration)
+            try:
+                ov_session = get_session_factory()()
+                try:
+                    from database.models import VisitorEntry, Visitor, Alert
+                    from services.visitor_service import is_visitor_present
+                    now_dt = datetime.datetime.now(datetime.timezone.utc)
+                    # Get recent entries from last 24h
+                    since = now_dt - datetime.timedelta(hours=24)
+                    recent_entries = ov_session.query(VisitorEntry).filter(
+                        VisitorEntry.event_type == "ENTRY",
+                        VisitorEntry.timestamp >= since
+                    ).all()
+
+                    for entry in recent_entries:
+                        if not entry.visitor_id:
+                            continue
+                        if not is_visitor_present(ov_session, entry.visitor_id):
+                            continue
+                        allowed_mins = entry.expected_duration_minutes or 60
+                        elapsed_mins = (now_dt - entry.timestamp.replace(tzinfo=datetime.timezone.utc if entry.timestamp.tzinfo is None else entry.timestamp.tzinfo)).total_seconds() / 60.0
+                        if elapsed_mins > allowed_mins:
+                            overstay_key = f"OVERSTAY_{entry.visitor_id}_{int(entry.timestamp.timestamp())}"
+                            if now - _VISITOR_LAST_ALERTS.get(overstay_key, 0) > 300:  # Remind every 5 mins
+                                _VISITOR_LAST_ALERTS[overstay_key] = now
+                                visitor_obj = ov_session.query(Visitor).filter(Visitor.id == entry.visitor_id).first()
+                                v_name = visitor_obj.full_name if visitor_obj else f"Visitor #{entry.visitor_id}"
+                                v_phone = visitor_obj.phone_number if visitor_obj else ""
+                                alert_msg = f"⚠️ OVERSTAY ALERT: {v_name} exceeded expected {allowed_mins} mins (Stayed {int(elapsed_mins)} mins). Phone: {v_phone}"
+                                
+                                # 1. Create DB Alert
+                                alert_rec = Alert(
+                                    alert_type="LOITERING",
+                                    severity="HIGH",
+                                    message=alert_msg,
+                                    status="NEW",
+                                )
+                                ov_session.add(alert_rec)
+                                ov_session.commit()
+
+                                # 2. Push to guard app queue
+                                _add_visitor_alert({
+                                    "alert_type": "OVERSTAY",
+                                    "visitor_id": entry.visitor_id,
+                                    "visitor_name": v_name,
+                                    "phone": v_phone,
+                                    "company": visitor_obj.company if visitor_obj else None,
+                                    "allowed_minutes": allowed_mins,
+                                    "elapsed_minutes": int(elapsed_mins),
+                                    "message": alert_msg,
+                                    "timestamp": now_dt.isoformat(),
+                                    "source": "OVERSTAY_MONITOR",
+                                })
+                                print(f"🚨 {alert_msg}")
+                finally:
+                    ov_session.close()
+            except Exception as overstay_err:
+                pass
+
             time.sleep(2.0)
         except Exception as error:
             print(f"Visitor camera worker error: {error}")
@@ -865,6 +924,13 @@ def generate_stream():
 def index():
     """Render the simple, elegant ECOLIFEBUDDY UI."""
     return render_template('index.html')
+
+
+@app.route('/kiosk')
+@app.route('/gate-agent')
+def kiosk():
+    """Tablet Kiosk AI Voice Check-in interface for gate visitors."""
+    return render_template('kiosk.html')
 
 
 @app.route('/video_feed')

@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="ta" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EcoLifyBuddy • AI Gate Kiosk</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '"Noto Sans Tamil"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ECFDF5',
+              100: '#D1FAE5',
+              400: '#34D399',
+              500: '#10B981',
+              600: '#059669',
+              700: '#047857',
+              900: '#064E3B',
+              950: '#022C22',
+            }
+          },
+          animation: {
+            'pulse-fast': 'pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'ripple': 'ripple 2s infinite ease-in-out',
+          },
+          keyframes: {
+            ripple: {
+              '0%': { transform: 'scale(0.95)', opacity: '0.8' },
+              '50%': { transform: 'scale(1.15)', opacity: '0.4' },
+              '100%': { transform: 'scale(0.95)', opacity: '0.8' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0B0F19;
+      color: #F8FAFC;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .orb-glow {
+      box-shadow: 0 0 60px 15px rgba(16, 185, 129, 0.45), inset 0 0 30px rgba(52, 211, 153, 0.6);
+    }
+    .orb-listening {
+      box-shadow: 0 0 80px 25px rgba(245, 158, 11, 0.65), inset 0 0 35px rgba(251, 191, 36, 0.8);
+    }
+    .orb-success {
+      box-shadow: 0 0 80px 25px rgba(16, 185, 129, 0.75), inset 0 0 35px rgba(52, 211, 153, 0.9);
+    }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col justify-between p-4 md:p-8">
+
+  <!-- TOP BAR -->
+  <header class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-xl">
+        🏢
+      </div>
+      <div>
+        <h1 class="text-lg md:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          EcoLifyBuddy <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30">Gate Kiosk</span>
+        </h1>
+        <p class="text-xs text-slate-400">தானியங்கி குரல் உதவியாளர் • Automatic Visitor Check-in</p>
+      </div>
+    </div>
+
+    <!-- Right Controls: Language & Live Clock -->
+    <div class="flex items-center gap-3">
+      <button id="lang-btn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition">
+        🌐 <span id="lang-label">தமிழ் (Tamil)</span>
+      </button>
+      <div id="live-clock" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+        --:--:--
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN KIOSK INTERACTION AREA -->
+  <main class="flex-1 flex flex-col md:flex-row items-center justify-center gap-6 lg:gap-12 my-auto max-w-6xl mx-auto w-full">
+    
+    <!-- LEFT: Camera & Interactive AI Voice Avatar -->
+    <div class="flex flex-col items-center justify-center text-center w-full md:w-1/2">
+      
+      <!-- AI Voice Avatar Orb -->
+      <div class="relative mb-6">
+        <div id="orb-container" class="w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 p-1 orb-glow animate-ripple transition-all duration-500 flex items-center justify-center cursor-pointer" onclick="manualStartVoice()">
+          <div class="w-full h-full rounded-full bg-slate-950 flex flex-col items-center justify-center p-4 overflow-hidden relative shadow-inner">
+            <canvas id="photo-canvas" class="hidden"></canvas>
+            <span id="agent-icon" class="text-5xl md:text-6xl z-10 animate-bounce">🎙️</span>
+            <span id="agent-pulse-text" class="text-[11px] font-bold text-brand-400 z-10 mt-1 uppercase tracking-wider">பேசத் தயாராக உள்ளது</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spoken Assistant Message Text -->
+      <!-- Spoken Assistant Message Text -->
+      <div class="max-w-md w-full bg-slate-900/80 border border-slate-800 rounded-2xl p-4 md:p-5 shadow-xl backdrop-blur-md">
+        <p class="text-xs font-semibold text-brand-400 uppercase tracking-widest mb-1.5" id="agent-role-label">AI Security Voice Agent</p>
+        <h2 id="agent-speech" class="text-base md:text-lg font-bold text-white leading-snug">
+          வணக்கம்! உங்களது பெயர் என்ன?
+        </h2>
+        <p id="user-heard-text" class="text-xs text-amber-300/90 italic mt-2 min-h-[1.2rem]">
+          (பேசத் தொடங்க வட்டத்தைத் தொடவும் அல்லது பேசுக பட்டனை அழுத்தவும்)
+        </p>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex items-center gap-2 mt-4 flex-wrap justify-center">
+        <button onclick="startConversation()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-teal-500/20 active:scale-95">
+          <span>🔊</span> உரையாடலைத் தொடங்கு (Start Voice Chat)
+        </button>
+        <button onclick="triggerVoiceCheck()" id="speak-btn" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20 active:scale-95">
+          <span>🎙️</span> பேசுக (Speak Now)
+        </button>
+        <button onclick="resetKiosk()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition active:scale-95">
+          🔄 ரீசெட் (Reset)
+        </button>
+      </div>
+
+      <!-- Dynamic Step-Based Quick Answer Chips -->
+      <div id="dynamic-chips-container" class="mt-4 w-full max-w-md bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span id="chips-title" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">⚡ விரைவு பதில்கள் (Quick Tap):</span>
+          <span id="chips-step" class="text-[10px] text-brand-400 font-semibold">படி 1: பெயர் (Step 1)</span>
+        </div>
+        
+        <!-- Step 1 Name Chips -->
+        <div id="chips-name" class="flex flex-wrap gap-1.5 justify-center">
+          <button type="button" onclick="selectQuickName('ஐயனார்')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-600 text-slate-200 border border-slate-700 transition">👤 ஐயனார்</button>
+          <button type="button" onclick="selectQuickName('சுரேஷ்')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-600 text-slate-200 border border-slate-700 transition">👤 சுரேஷ்</button>
+          <button type="button" onclick="selectQuickName('குமார்')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-600 text-slate-200 border border-slate-700 transition">👤 குமார்</button>
+          <button type="button" onclick="selectQuickName('விக்னேஷ்')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-600 text-slate-200 border border-slate-700 transition">👤 விக்னேஷ்</button>
+          <button type="button" onclick="selectQuickName('ரமேஷ்')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-600 text-slate-200 border border-slate-700 transition">👤 ரமேஷ்</button>
+        </div>
+
+        <!-- Step 2 Purpose Chips (Initially hidden) -->
+        <div id="chips-purpose" class="hidden flex flex-wrap gap-1.5 justify-center">
+          <button type="button" onclick="selectQuickPurpose('Delivery', 'Swiggy', 30)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600 text-slate-200 border border-slate-700 transition">🍔 ஃபுட் டெலிவரி (Swiggy - 30 நிமிடம்)</button>
+          <button type="button" onclick="selectQuickPurpose('Delivery', 'Zomato', 30)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600 text-slate-200 border border-slate-700 transition">🍕 Zomato (30 நிமிடம்)</button>
+          <button type="button" onclick="selectQuickPurpose('Electrician', '', 60)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-600 text-slate-200 border border-slate-700 transition">⚡ எலக்ட்ரீசியன் (1 மணி)</button>
+          <button type="button" onclick="selectQuickPurpose('Plumber', '', 60)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-200 border border-slate-700 transition">🚰 பிளம்பர் (1 மணி)</button>
+          <button type="button" onclick="selectQuickPurpose('Delivery', 'Amazon', 15)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600 text-slate-200 border border-slate-700 transition">📦 அமேசான் பார்சல் (15 நிமிடம்)</button>
+          <button type="button" onclick="selectQuickPurpose('Guest', '', 60)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-purple-600 text-slate-200 border border-slate-700 transition">👥 விருந்தினர் (Guest)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Extracted Details & Touch Input Fallback -->
+    <div class="w-full md:w-1/2 bg-slate-900/90 border border-slate-800/90 rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
+      
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <span>📋</span> பதிவு விவரங்கள் (Visitor Info)
+          </h3>
+          <span id="entry-badge" class="px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-slate-800 text-slate-400">
+            Awaiting Input
+          </span>
+        </div>
+
+        <!-- Visitor Info Cards -->
+        <div class="space-y-3.5">
+          <!-- Name -->
+          <div>
+            <label class="text-[11px] font-semibold text-slate-400 uppercase">பார்வையாளர் பெயர் (Name)</label>
+            <input type="text" id="v-name" placeholder="எ.கா. Ramesh / சுரேஷ்" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm font-semibold focus:border-brand-500 outline-none">
+          </div>
+
+          <!-- Purpose & Company -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-400 uppercase">வேலை / நோக்கம் (Purpose)</label>
+              <select id="v-purpose" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm font-semibold focus:border-brand-500 outline-none">
+                <option value="Delivery">Delivery (டெலிவரி)</option>
+                <option value="Electrician">Electrician (எலக்ட்ரீசியன்)</option>
+                <option value="Plumber">Plumber (பிளம்பர்)</option>
+                <option value="Housekeeping">Housekeeping (வேலை)</option>
+                <option value="Technician">Technician</option>
+                <option value="Guest">Guest (விருந்தினர்)</option>
+                <option value="Vendor">Vendor</option>
+                <option value="Other">Other (பிற)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-400 uppercase">நிறுவனம் (Company)</label>
+              <input type="text" id="v-company" placeholder="Zomato, Swiggy..." class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm font-semibold focus:border-brand-500 outline-none">
+            </div>
+          </div>
+
+          <!-- Duration -->
+          <div>
+            <label class="text-[11px] font-semibold text-slate-400 uppercase">அனுமதிக்கப்பட்ட நேரம் (Expected Duration)</label>
+            <div class="grid grid-cols-3 gap-2 mt-1">
+              <button type="button" onclick="setDuration(15)" class="dur-btn py-2 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition" data-dur="15">15 நிமிடங்கள்</button>
+              <button type="button" onclick="setDuration(30)" class="dur-btn py-2 text-xs font-bold rounded-lg bg-brand-600/30 border border-brand-500 text-brand-300 transition" data-dur="30">30 நிமிடங்கள்</button>
+              <button type="button" onclick="setDuration(60)" class="dur-btn py-2 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition" data-dur="60">1 மணி நேரம்</button>
+            </div>
+          </div>
+
+          <!-- Phone Number -->
+          <div>
+            <label class="text-[11px] font-semibold text-slate-400 uppercase">மொபைல் எண் (Phone Number)</label>
+            <input type="tel" id="v-phone" maxlength="10" placeholder="10 இலக்க எண் உள்ளிடவும்" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-brand-400 font-mono text-base font-bold tracking-wider focus:border-brand-500 outline-none">
+          </div>
+        </div>
+      </div>
+
+      <!-- Confirm Check-In Button -->
+      <div class="mt-6 pt-4 border-t border-slate-800 flex gap-3">
+        <button onclick="openPhotoCaptureStep()" id="submit-btn" class="flex-1 py-3.5 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white font-extrabold text-sm tracking-wide shadow-xl shadow-brand-500/25 transition active:scale-98 flex items-center justify-center gap-2">
+          <span>📸</span> <span id="submit-text">புகைப்படம் எடுத்து பதிவு செய்க (Photo &amp; Check-in)</span>
+        </button>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- MODAL: Face Photo Capture Step (Only Opens at the End) -->
+  <div id="photo-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl relative">
+      <div class="w-10 h-10 rounded-2xl bg-brand-500/20 text-brand-400 flex items-center justify-center mx-auto mb-3 text-xl">
+        📷
+      </div>
+      <h3 class="text-base font-bold text-white mb-1">பார்வையாளர் புகைப்படம் (Visitor Photo)</h3>
+      <p class="text-xs text-slate-400 mb-4">பாதுகாப்பு நோக்கத்திற்காக கேமராவைப் பார்த்து ஒருமுறை புன்னகைக்கவும்.</p>
+
+      <!-- Video Feed / Preview -->
+      <div class="relative w-56 h-56 mx-auto rounded-2xl overflow-hidden border-2 border-brand-500 shadow-xl bg-black">
+        <video id="kiosk-cam-modal" autoplay playsinline muted class="w-full h-full object-cover"></video>
+        <canvas id="snapshot-canvas" class="hidden"></canvas>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-2.5 mt-5">
+        <button onclick="closePhotoCaptureModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
+          ரத்து (Cancel)
+        </button>
+        <button onclick="captureAndSubmit()" id="capture-submit-btn" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white text-xs font-bold transition shadow-lg shadow-brand-500/25">
+          📸 படம் எடுத்து பதிவு (Snap &amp; Submit)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-800/80 pt-2.5">
+    <span>EcoLifyBuddy Smart Gate System • DPDP Act Compliant</span>
+    <span class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      Online &amp; Active
+    </span>
+  </footer>
+
+  <!-- SCRIPT -->
+  <script>
+    // State
+    let currentLang = 'ta-IN'; // 'ta-IN' or 'en-US'
+    let selectedDuration = 30;
+    let recognition = null;
+    let isListening = false;
+    let currentStep = 'GREETING'; // GREETING -> ASK_PHONE -> CONFIRMED
+    let autoDetectTimer = null;
+
+    // Clock
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('live-clock').innerText = now.toLocaleTimeString();
+    }, 1000);
+
+    // Set duration helper
+    function setDuration(mins) {
+      selectedDuration = mins;
+      document.querySelectorAll('.dur-btn').forEach(b => {
+        if (parseInt(b.getAttribute('data-dur')) === mins) {
+          b.className = 'dur-btn py-2 text-xs font-bold rounded-lg bg-brand-600/30 border border-brand-500 text-brand-300 transition';
+        } else {
+          b.className = 'dur-btn py-2 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition';
+        }
+      });
+    }
+
+    // Toggle Language
+    function toggleLanguage() {
+      if (currentLang === 'ta-IN') {
+        currentLang = 'en-US';
+        document.getElementById('lang-label').innerText = 'English';
+        speakText("Welcome to EcoLifyBuddy. Please tell your name and purpose of visit.");
+      } else {
+        currentLang = 'ta-IN';
+        document.getElementById('lang-label').innerText = 'தமிழ் (Tamil)';
+        speakText("வணக்கம்! உங்கள் பெயர் மற்றும் எதற்காக இங்கே வந்திருக்கிறீர்கள்?");
+      }
+    }
+
+    // Natural Tamil / English Speech Audio (Server-Backed gTTS with Caching)
+    let currentTtsAudio = null;
+
+    function speakText(text, callback) {
+      // Stop listening while speaking to avoid hearing itself
+      stopListeningTemporary(false);
+
+      document.getElementById('agent-speech').innerText = text;
+      setOrbState('speaking');
+
+      if (currentTtsAudio) {
+        try { currentTtsAudio.pause(); currentTtsAudio = null; } catch(e){}
+      }
+
+      const langCode = currentLang.includes('ta') ? 'ta' : 'en';
+      const url = `/api/v2/registration/kiosk/tts?text=${encodeURIComponent(text)}&lang=${langCode}`;
+
+      const audio = new Audio(url);
+      currentTtsAudio = audio;
+
+      let ended = false;
+      function finish() {
+        if (ended) return;
+        ended = true;
+        currentTtsAudio = null;
+        setOrbState('idle');
+        if (callback) {
+          callback();
+        } else {
+          setTimeout(() => startListening(), 250);
+        }
+      }
+
+      audio.onended = finish;
+      audio.onerror = (e) => {
+        console.warn("Server TTS play error, trying browser synthesis fallback:", e);
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = currentLang;
+          u.onend = finish;
+          u.onerror = finish;
+          window.speechSynthesis.speak(u);
+        } else {
+          finish();
+        }
+      };
+
+      audio.play().catch(err => {
+        console.warn("Audio autoplay blocked by browser policy:", err);
+        // Autoplay may need first user click on page
+        finish();
+      });
+    }
+
+    // Set Orb Visual State
+    function setOrbState(state) {
+      const orb = document.getElementById('orb-container');
+      const pulseText = document.getElementById('agent-pulse-text');
+      const icon = document.getElementById('agent-icon');
+      const speakBtn = document.getElementById('speak-btn');
+
+      if (state === 'listening') {
+        orb.className = 'w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-rose-600 via-amber-500 to-yellow-400 p-1 orb-listening animate-pulse transition-all duration-300 flex items-center justify-center cursor-pointer';
+        pulseText.innerText = currentLang === 'ta-IN' ? '🔴 கேட்கிறது... பேசவும்' : '🔴 Listening... speak now';
+        pulseText.className = 'text-[11px] font-bold text-amber-300 z-10 mt-1 uppercase tracking-wider';
+        icon.innerText = '👂';
+        if (speakBtn) {
+          speakBtn.className = 'px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-rose-500/30 animate-pulse';
+          speakBtn.innerHTML = '<span>🛑</span> பேசி முடித்தேன் (Done Speaking)';
+        }
+      } else if (state === 'speaking') {
+        orb.className = 'w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 p-1 orb-glow animate-ripple transition-all duration-500 flex items-center justify-center cursor-pointer';
+        pulseText.innerText = currentLang === 'ta-IN' ? '🔊 பதிலளிக்கிறது (Speaking...)' : '🔊 Speaking...';
+        pulseText.className = 'text-[11px] font-bold text-brand-400 z-10 mt-1 uppercase tracking-wider';
+        icon.innerText = '🗣️';
+        if (speakBtn) {
+          speakBtn.className = 'px-4 py-2.5 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold cursor-not-allowed';
+          speakBtn.innerHTML = '<span>⏳</span> கேட்கிறது (Listening soon...)';
+        }
+      } else if (state === 'success') {
+        orb.className = 'w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-300 p-1 orb-success transition-all duration-500 flex items-center justify-center cursor-pointer';
+        pulseText.innerText = 'அனுமதி அளிக்கப்பட்டது (Approved)';
+        pulseText.className = 'text-[11px] font-bold text-emerald-300 z-10 mt-1 uppercase tracking-wider';
+        icon.innerText = '✅';
+      } else {
+        orb.className = 'w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 p-1 orb-glow transition-all duration-500 flex items-center justify-center cursor-pointer';
+        pulseText.innerText = currentLang === 'ta-IN' ? 'பேசத் தயாராக உள்ளது' : 'Ready to talk';
+        pulseText.className = 'text-[11px] font-bold text-brand-400 z-10 mt-1 uppercase tracking-wider';
+        icon.innerText = '🎙️';
+        if (speakBtn) {
+          speakBtn.className = 'px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20 active:scale-95';
+          speakBtn.innerHTML = '<span>🎙️</span> பேசுக (Speak Now)';
+        }
+      }
+    }
+
+    // Web Speech Recognition (STT) + Server Audio Fallback
+    let currentRecInstance = null;
+    let audioCtx = null;
+    let mediaStream = null;
+    let scriptNode = null;
+    let audioBuffers = [];
+    let micSampleRate = 44100;
+    let recognitionActive = false;
+
+    // Web Audio Unlock on any user click
+    function ensureAudioUnlocked() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function encodeWAV(samples, sampleRate) {
+      const buffer = new ArrayBuffer(44 + samples.length * 2);
+      const view = new DataView(buffer);
+      function writeStr(offset, str) {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+      }
+      writeStr(0, 'RIFF');
+      view.setUint32(4, 36 + samples.length * 2, true);
+      writeStr(8, 'WAVE');
+      writeStr(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM
+      view.setUint16(22, 1, true); // 1 channel
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeStr(36, 'data');
+      view.setUint32(40, samples.length * 2, true);
+      let offset = 44;
+      for (let i = 0; i < samples.length; i++) {
+        let s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+      }
+      return buffer;
+    }
+
+    function stopListeningTemporary(sendAudio = false) {
+      recognitionActive = false;
+      if (currentRecInstance) {
+        try { currentRecInstance.stop(); } catch(e){}
+      }
+      isListening = false;
+      setOrbState('idle');
+
+      if (scriptNode) { scriptNode.disconnect(); scriptNode = null; }
+
+      if (sendAudio && audioBuffers.length > 5) {
+        sendWAVToServer();
+      }
+    }
+
+    function sendWAVToServer() {
+      let totalLength = audioBuffers.reduce((acc, b) => acc + b.length, 0);
+      if (totalLength < 4000) {
+        audioBuffers = [];
+        return;
+      }
+      let merged = new Float32Array(totalLength);
+      let offset = 0;
+      for (let b of audioBuffers) {
+        merged.set(b, offset);
+        offset += b.length;
+      }
+      audioBuffers = [];
+
+      const wavBytes = encodeWAV(merged, micSampleRate);
+      const blob = new Blob([wavBytes], { type: 'audio/wav' });
+
+      document.getElementById('user-heard-text').innerText = '⏳ குரல் பகுப்பாய்வு செய்யப்படுகிறது (Processing voice)...';
+
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.wav');
+      formData.append('language', currentLang);
+
+      fetch('/api/v2/registration/kiosk/voice-audio', {
+        method: 'POST',
+        body: formData
+      })
+      .then(r => r.json())
+      .then(data => {
+        const text = data.transcript || '';
+        if (text && text.trim().length > 1) {
+          document.getElementById('user-heard-text').innerText = `"${text}"`;
+          handleVisitorSpeech(text);
+        } else {
+          document.getElementById('user-heard-text').innerText = 'மீண்டும் பேசவும் அல்லது கீழேயுள்ள பட்டனைத் தொடவும்.';
+          // Re-enable listening
+          setTimeout(() => {
+            if (!isListening && convStep !== 'DONE') startListening();
+          }, 1000);
+        }
+      })
+      .catch(e => {
+        console.warn("Server audio transcription error:", e);
+      });
+    }
+
+    async function initMicStream() {
+      if (!mediaStream) {
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch(err) {
+          console.warn("Mic access error:", err);
+          document.getElementById('user-heard-text').innerText = "⚠️ மைக்ரோஃபோன் பர்மிஷன் தேவை (Microphone permission needed).";
+          return false;
+        }
+      }
+      return true;
+    }
+
+    async function startListening() {
+      ensureAudioUnlocked();
+      if (currentTtsAudio) {
+        try { currentTtsAudio.pause(); currentTtsAudio = null; } catch(e){}
+      }
+
+      const hasMic = await initMicStream();
+      if (!hasMic) return;
+
+      isListening = true;
+      recognitionActive = true;
+      setOrbState('listening');
+      document.getElementById('user-heard-text').innerText = currentLang === 'ta-IN' 
+        ? '🔴 மைக் ஆன்: பேசவும்... (Listening...)' 
+        : '🔴 Mic Active: Speak now...';
+
+      // 1. AudioContext buffer recording for server STT
+      audioBuffers = [];
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+        micSampleRate = audioCtx.sampleRate || 44100;
+
+        const source = audioCtx.createMediaStreamSource(mediaStream);
+        scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
+        scriptNode.onaudioprocess = (e) => {
+          if (!isListening) return;
+          const channel = e.inputBuffer.getChannelData(0);
+          audioBuffers.push(new Float32Array(channel));
+        };
+        source.connect(scriptNode);
+        scriptNode.connect(audioCtx.destination);
+      } catch(e) {
+        console.warn("AudioContext recording init error:", e);
+      }
+
+      // 2. Browser WebSpeech API
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          if (currentRecInstance) {
+            try { currentRecInstance.abort(); } catch(e){}
+          }
+          const rec = new SpeechRecognition();
+          rec.continuous = true;
+          rec.interimResults = true;
+          rec.lang = currentLang;
+
+          rec.onresult = (event) => {
+            let interimTranscript = '';
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+              } else {
+                interimTranscript += event.results[i][0].transcript;
+              }
+            }
+            if (interimTranscript) {
+              document.getElementById('user-heard-text').innerText = `"${interimTranscript}"`;
+            }
+            if (finalTranscript.trim().length > 1) {
+              document.getElementById('user-heard-text').innerText = `"${finalTranscript.trim()}"`;
+              stopListeningTemporary(false);
+              handleVisitorSpeech(finalTranscript.trim());
+            }
+          };
+
+          rec.onerror = (e) => {
+            console.warn("Speech recognition error:", e.error);
+            if (e.error === 'no-speech' && recognitionActive) {
+              // keep alive
+            }
+          };
+
+          rec.onend = () => {
+            if (recognitionActive && isListening) {
+              try { rec.start(); } catch(e){}
+            }
+          };
+
+          currentRecInstance = rec;
+          rec.start();
+        } catch(e){
+          console.warn("SpeechRecognition start exception:", e);
+        }
+      }
+    }
+
+    // Conversational Step State Machine
+    let convStep = 'IDLE';
+
+    function updateStepUI() {
+      const chipsName = document.getElementById('chips-name');
+      const chipsPurpose = document.getElementById('chips-purpose');
+      const chipsStep = document.getElementById('chips-step');
+
+      if (convStep === 'ASK_NAME' || convStep === 'LISTEN_NAME') {
+        chipsName.classList.remove('hidden');
+        chipsPurpose.classList.add('hidden');
+        chipsStep.innerText = 'படி 1: பெயர் (Step 1)';
+      } else if (convStep === 'ASK_PURPOSE' || convStep === 'LISTEN_PURPOSE') {
+        chipsName.classList.add('hidden');
+        chipsPurpose.classList.remove('hidden');
+        chipsStep.innerText = 'படி 2: நோக்கம் & நேரம் (Step 2)';
+      }
+    }
+
+    function selectQuickName(name) {
+      document.getElementById('v-name').value = name;
+      convStep = 'ASK_PURPOSE';
+      updateStepUI();
+      const askPurpose = currentLang === 'ta-IN'
+        ? `நன்றி ${name}! நீங்கள் எதற்காக இங்கே வந்திருக்கிறீர்கள்?`
+        : `Thank you ${name}! What is the purpose of your visit?`;
+      speakText(askPurpose, () => {
+        convStep = 'LISTEN_PURPOSE';
+        startListening();
+      });
+    }
+
+    function selectQuickPurpose(purpose, company, duration) {
+      document.getElementById('v-purpose').value = purpose;
+      if (company) document.getElementById('v-company').value = company;
+      setDuration(duration);
+
+      convStep = 'TAKE_PHOTO';
+      const photoMsg = currentLang === 'ta-IN'
+        ? "நன்றி நீங்கள் பதிவு செய்ததற்கு. ஒரே நிமிடம் உங்களை படம் பிடித்துக் கொள்கிறோம். கேமராவைப் பார்க்கவும்."
+        : "Thank you for registering. Please hold on, capturing your photo now.";
+      
+      speakText(photoMsg, () => {
+        openAndAutoSnapPhoto();
+      });
+    }
+
+    function startConversation() {
+      convStep = 'ASK_NAME';
+      updateStepUI();
+      const prompt = currentLang === 'ta-IN' 
+        ? "வணக்கம்! உங்களது பெயர் என்ன?" 
+        : "Welcome! What is your name?";
+      speakText(prompt, () => {
+        convStep = 'LISTEN_NAME';
+        startListening();
+      });
+    }
+
+    function manualStartVoice() {
+      startConversation();
+    }
+
+    function triggerVoiceCheck() {
+      if (convStep === 'IDLE' || convStep === 'DONE') {
+        startConversation();
+      } else {
+        if (isListening) {
+          stopListeningTemporary(true);
+        } else {
+          startListening();
+        }
+      }
+    }
+
+    function testSpokenInput(phrase) {
+      document.getElementById('user-heard-text').innerText = `"${phrase}"`;
+      handleVisitorSpeech(phrase);
+    }
+
+    // Turn-by-Turn Speech Handler
+    async function handleVisitorSpeech(transcript) {
+      if (!transcript || transcript.trim().length === 0) return;
+
+      try {
+        const res = await fetch('/api/v2/registration/kiosk/voice-parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: transcript, language: currentLang })
+        });
+        const data = await res.json();
+        const extracted = data.extracted || {};
+
+        if (convStep === 'LISTEN_NAME' || convStep === 'ASK_NAME' || !document.getElementById('v-name').value) {
+          const name = extracted.name || transcript.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").trim();
+          document.getElementById('v-name').value = name;
+
+          convStep = 'ASK_PURPOSE';
+          updateStepUI();
+          const askPurpose = currentLang === 'ta-IN'
+            ? `நன்றி ${name}! நீங்கள் எதற்காக இங்கே வந்திருக்கிறீர்கள்?`
+            : `Thank you ${name}! What is the purpose of your visit?`;
+          
+          speakText(askPurpose, () => {
+            convStep = 'LISTEN_PURPOSE';
+            startListening();
+          });
+
+        } else if (convStep === 'LISTEN_PURPOSE' || convStep === 'ASK_PURPOSE') {
+          if (extracted.company) document.getElementById('v-company').value = extracted.company;
+          if (extracted.purpose) document.getElementById('v-purpose').value = extracted.purpose;
+          if (extracted.phone) document.getElementById('v-phone').value = extracted.phone;
+          if (extracted.expected_duration_minutes) {
+            setDuration(extracted.expected_duration_minutes);
+          }
+
+          convStep = 'TAKE_PHOTO';
+          const photoMsg = currentLang === 'ta-IN'
+            ? "நன்றி நீங்கள் பதிவு செய்ததற்கு. ஒரே நிமிடம் உங்களை படம் பிடித்துக் கொள்கிறோம். கேமராவைப் பார்க்கவும்."
+            : "Thank you for registering. Please hold on, capturing your photo now.";
+          
+          speakText(photoMsg, () => {
+            openAndAutoSnapPhoto();
+          });
+
+        } else {
+          if (extracted.name) document.getElementById('v-name').value = extracted.name;
+          if (extracted.company) document.getElementById('v-company').value = extracted.company;
+          if (extracted.purpose) document.getElementById('v-purpose').value = extracted.purpose;
+          if (extracted.phone) document.getElementById('v-phone').value = extracted.phone;
+          if (extracted.expected_duration_minutes) setDuration(extracted.expected_duration_minutes);
+        }
+
+      } catch (err) {
+        console.error("Speech parse error:", err);
+      }
+    }
+
+    // Modal & Automatic Photo Capture
+    let modalCameraStream = null;
+
+    async function openAndAutoSnapPhoto() {
+      const modal = document.getElementById('photo-modal');
+      modal.classList.remove('hidden');
+
+      const submitBtn = document.getElementById('capture-submit-btn');
+      submitBtn.innerText = '📷 3 வினாடியில் படம் பிடிக்கப்படும்...';
+
+      try {
+        modalCameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
+        });
+        const videoElem = document.getElementById('kiosk-cam-modal');
+        videoElem.srcObject = modalCameraStream;
+
+        // Auto snapshot after 2.5 seconds
+        setTimeout(() => {
+          captureAndSubmit();
+        }, 2500);
+
+      } catch (err) {
+        console.warn("Camera could not be accessed:", err);
+        // Fallback without camera
+        setTimeout(() => {
+          closePhotoCaptureModal();
+          submitCheckin(null);
+        }, 2000);
+      }
+    }
+
+    function openPhotoCaptureStep() {
+      openAndAutoSnapPhoto();
+    }
+
+    function closePhotoCaptureModal() {
+      const modal = document.getElementById('photo-modal');
+      modal.classList.add('hidden');
+      if (modalCameraStream) {
+        modalCameraStream.getTracks().forEach(track => track.stop());
+        modalCameraStream = null;
+      }
+    }
+
+    function captureAndSubmit() {
+      let photoB64 = null;
+      const videoElem = document.getElementById('kiosk-cam-modal');
+      const canvas = document.getElementById('snapshot-canvas');
+
+      if (videoElem && videoElem.videoWidth) {
+        canvas.width = videoElem.videoWidth;
+        canvas.height = videoElem.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoElem, 0, 0, canvas.width, canvas.height);
+        photoB64 = canvas.toDataURL('image/jpeg', 0.85);
+      }
+
+      closePhotoCaptureModal();
+      submitCheckin(photoB64);
+    }
+
+    // Submit Check-In to Backend
+    async function submitCheckin(photoBase64 = null) {
+      const name = document.getElementById('v-name').value.trim() || 'Visitor';
+      const phone = document.getElementById('v-phone').value.trim();
+      const company = document.getElementById('v-company').value.trim();
+      const purpose = document.getElementById('v-purpose').value;
+
+      const payload = {
+        name: name,
+        phone: phone,
+        company: company,
+        purpose: purpose,
+        expected_duration_minutes: selectedDuration,
+        photo_base64: photoBase64,
+      };
+
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.innerText = 'பதிவு செய்யப்படுகிறது...';
+
+      try {
+        const res = await fetch('/api/v2/registration/kiosk/voice-checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          convStep = 'DONE';
+          setOrbState('success');
+          const badge = document.getElementById('entry-badge');
+          if (data.event_type === 'EXIT') {
+            badge.innerText = 'CHECKED OUT (வெளியேறியது)';
+            badge.className = 'px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-blue-900/60 text-blue-300 border border-blue-500/40';
+            speakText("வெளியேறுதல் பதிவு செய்யப்பட்டது. நல்ல நாள் ஆக அமையட்டும்!");
+          } else {
+            badge.innerText = 'APPROVED (அனுமதிக்கப்பட்டது)';
+            badge.className = 'px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-500/40';
+            speakText(`செக்-இன் வெற்றிகரமாக முடிந்தது! நீங்கள் ${selectedDuration} நிமிடங்கள் வரை வளாகத்தில் இருக்கலாம்.`);
+          }
+
+          setTimeout(() => {
+            resetKiosk();
+          }, 6000);
+        } else {
+          alert(data.error || 'Check-in failed');
+        }
+      } catch (err) {
+        alert('Network error. Check server.');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '📸 புகைப்படம் எடுத்து பதிவு செய்க (Photo & Check-in)';
+      }
+    }
+
+    function resetKiosk() {
+      convStep = 'IDLE';
+      document.getElementById('v-name').value = '';
+      document.getElementById('v-company').value = '';
+      document.getElementById('v-phone').value = '';
+      document.getElementById('user-heard-text').innerText = '(பேசத் தொடங்க வட்டத்தைத் தொடவும் / அல்லது நேரடியாக பேசலாம்)';
+      document.getElementById('agent-speech').innerText = currentLang === 'ta-IN' 
+        ? 'வணக்கம்! உங்களது பெயர் என்ன?'
+        : 'Welcome! What is your name?';
+      setDuration(30);
+      setOrbState('idle');
+      document.getElementById('entry-badge').innerText = 'Awaiting Input';
+      document.getElementById('entry-badge').className = 'px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-slate-800 text-slate-400';
+    }
+  </script>
+</body>
+</html>
