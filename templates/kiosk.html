@@ -1,35 +1,60 @@
 <!DOCTYPE html>
-<html lang="ta" class="dark">
+<html lang="ta" class="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>EcoLifyBuddy • AI Gate Kiosk</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts -->
+  <title>EcoLifyBuddy • AI Autonomous Gate Kiosk</title>
+  
+  <!-- Modern Fonts: Plus Jakarta Sans, Outfit & JetBrains Mono (Matches Admin Panel) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Tamil:wght@400;600;700&display=swap" rel="stylesheet">
 
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', '"Noto Sans Tamil"', 'sans-serif'],
-          },
           colors: {
             brand: {
-              50: '#ECFDF5',
-              100: '#D1FAE5',
-              400: '#34D399',
-              500: '#10B981',
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              400: '#34d399',
+              500: '#10b981',
               600: '#059669',
               700: '#047857',
-              900: '#064E3B',
+              800: '#065f46',
+              900: '#064e3b',
               950: '#022C22',
+            },
+            slate: {
+              25: '#FCFDFF',
+              50: '#F8FAFC',
+              100: '#F1F5F9',
+              200: '#E2E8F0',
+              300: '#CBD5E1',
+              400: '#94A3B8',
+              500: '#64748B',
+              600: '#475569',
+              700: '#334155',
+              800: '#1E293B',
+              900: '#0F172A',
+              950: '#020617',
             }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '"Noto Sans Tamil"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            display: ['Outfit', '"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          boxShadow: {
+            'card': '0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05)',
+            'card-hover': '0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
+            'elevated': '0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
+            'pill': '0 2px 6px 0 rgba(16, 185, 129, 0.15)',
           },
           animation: {
             'pulse-fast': 'pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -44,8 +69,8 @@
               '100%': { transform: 'scale(0.96)', opacity: '0.85' },
             },
             scan: {
-              '0%': { top: '5%' },
-              '100%': { top: '90%' }
+              '0%': { top: '6%' },
+              '100%': { top: '88%' }
             }
           }
         }
@@ -53,207 +78,274 @@
     }
   </script>
   <style>
-    body {
-      background-color: #070B14;
-      color: #F8FAFC;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
+    /* Clean executive scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f8fafc; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .dark ::-webkit-scrollbar-track { background: #0f172a; }
+    .dark ::-webkit-scrollbar-thumb { background: #334155; }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Admin subtle grid pattern */
+    .bg-grid-light {
+      background-color: #F8FAFC;
+      background-image: radial-gradient(#E2E8F0 0.85px, transparent 0.85px);
+      background-size: 24px 24px;
     }
+    .dark .bg-grid-light {
+      background-color: #090D16;
+      background-image: radial-gradient(#1E293B 0.85px, transparent 0.85px);
+      background-size: 24px 24px;
+    }
+
+    /* Laser scan HUD beam */
     .hud-scanner {
-      background: linear-gradient(180deg, rgba(16, 185, 129, 0) 0%, rgba(16, 185, 129, 0.5) 50%, rgba(16, 185, 129, 0) 100%);
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0) 0%, rgba(16, 185, 129, 0.6) 50%, rgba(16, 185, 129, 0) 100%);
     }
+
+    /* Beacon pulse from admin */
+    @keyframes beacon-pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .beacon-active { animation: beacon-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1); }
   </style>
 </head>
-<body class="h-screen w-screen overflow-hidden flex flex-col justify-between p-3 md:p-6" onclick="unlockAudioContext()">
+<body class="bg-grid-light text-slate-800 dark:text-slate-100 font-sans h-screen w-screen overflow-hidden flex flex-col justify-between selection:bg-brand-500 selection:text-white transition-colors duration-200 p-2 md:p-3" onclick="unlockAudioContext()">
 
-  <!-- TOP BAR -->
-  <header class="flex items-center justify-between border-b border-slate-800/80 pb-3">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-xl shadow-lg shadow-brand-500/10">
-        🛡️
+  <!-- ========================================================================= -->
+  <!-- 1. EXECUTIVE HEADER (Matches Admin Panel) -->
+  <!-- ========================================================================= -->
+  <header class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 transition-all shadow-card flex items-center justify-between gap-3 shrink-0">
+    
+    <!-- Brand & Platform Identity -->
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 p-0.5 shadow-xs flex items-center justify-center shrink-0">
+        <div class="w-full h-full bg-white dark:bg-slate-950 rounded-[7px] flex items-center justify-center">
+          <svg class="w-4 h-4 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
       </div>
       <div>
-        <h1 class="text-base md:text-lg font-bold tracking-tight text-white flex items-center gap-2">
-          EcoLifyBuddy <span class="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30">AI Autonomous Gate Agent</span>
-        </h1>
-        <p class="text-[11px] text-slate-400">தானியங்கி குரல் &amp; முக அங்கீகார செக்-இன் • Real-time AI Assistant</p>
+        <div class="flex items-center gap-1.5">
+          <a href="/" class="font-display font-extrabold text-base tracking-tight text-slate-900 dark:text-white hover:opacity-90 transition">
+            ECOLIFY<span class="text-brand-600 dark:text-brand-400">BUDDY</span>
+          </a>
+          <span class="px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 border border-brand-200 dark:border-brand-700/50 rounded-full" id="header-badge">
+            Autonomous Gate Kiosk
+          </span>
+        </div>
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-tight" id="header-subtitle">
+          தானியங்கி குரல் &amp; முக அங்கீகார செக்-இன் • Real-time AI Multimodal Assistant
+        </p>
       </div>
     </div>
 
-    <!-- Gate Selector, Audio Unlock, Gemini Live Toggle & Language Controls -->
-    <div class="flex items-center gap-2 flex-wrap justify-end">
+    <!-- Gate Selector, Controls & Navigation -->
+    <div class="flex items-center gap-1.5 flex-wrap justify-end">
       <!-- Entry vs Exit Gate Switcher -->
-      <div class="flex items-center bg-slate-900 border border-slate-700 rounded-xl p-0.5 shadow-sm">
-        <a href="/entry" id="gate-entry-tab" class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-brand-600 text-white shadow-xs">
-          🚪 நுழைவு (Entry)
+      <div class="flex items-center bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-lg p-0.5 shadow-xs">
+        <a href="/entry" id="gate-entry-tab" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 bg-brand-600 text-white shadow-xs">
+          🚪 <span id="tab-entry-text">நுழைவு (Entry)</span>
         </a>
-        <a href="/exit" id="gate-exit-tab" class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-400 hover:text-white">
-          🚶 வெளியேறுதல் (Exit)
+        <a href="/exit" id="gate-exit-tab" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
+          🚶 <span id="tab-exit-text">வெளியேறுதல் (Exit)</span>
         </a>
       </div>
 
-      <button id="live-api-toggle-btn" onclick="toggleGeminiLiveMode()" title="Toggle Gemini Multimodal Live API (ai.google.dev/gemini-api/docs/live-api)" class="px-3 py-1.5 rounded-xl bg-purple-950/80 border border-purple-500/40 text-purple-300 text-xs font-bold transition flex items-center gap-1.5 shadow-sm hover:bg-purple-900/80">
+      <!-- Live API Mode Switcher -->
+      <button id="live-api-toggle-btn" onclick="toggleGeminiLiveMode()" title="Toggle Gemini Multimodal Live API" class="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-[11px] font-semibold transition flex items-center gap-1 shadow-xs cursor-pointer">
         <span>⚡</span> <span id="live-api-label">Live API: Auto</span>
       </button>
-      <button id="audio-unlock-btn" onclick="unlockAudioContext(true)" class="px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition flex items-center gap-1.5 shadow-sm hover:bg-emerald-900/80">
-        <span>🔊</span> <span id="audio-status-label">குரல் இயக்கம் (Audio Active)</span>
+
+      <!-- Audio Unlock Button -->
+      <button id="audio-unlock-btn" onclick="unlockAudioContext(true)" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold transition flex items-center gap-1 shadow-xs cursor-pointer">
+        <span>🔊</span> <span id="audio-status-label">குரல் தயார் (Audio Active)</span>
       </button>
-      <button id="lang-btn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition">
+
+      <!-- Language Toggle -->
+      <button id="lang-btn" onclick="toggleLanguage()" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition flex items-center gap-1 shadow-xs cursor-pointer">
         🌐 <span id="lang-label">தமிழ் (Tamil)</span>
       </button>
-      <div id="live-clock" class="text-xs font-mono px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hidden sm:block">
-        --:--:--
+
+      <!-- Live Clock -->
+      <div class="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono text-slate-600 dark:text-slate-300">
+        <span id="live-clock">--:--:--</span>
       </div>
+
+      <!-- Back to Admin Dashboard Link -->
+      <a href="/" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-semibold transition flex items-center gap-1 shadow-xs">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+        </svg>
+        <span>Admin</span>
+      </a>
     </div>
   </header>
 
-  <!-- MAIN KIOSK INTERACTION AREA -->
-  <main class="flex-1 flex flex-col lg:flex-row items-stretch justify-center gap-5 my-auto max-w-6xl mx-auto w-full py-2">
+  <!-- ========================================================================= -->
+  <!-- 2. MAIN KIOSK INTERACTION WORKSPACE (FITS SCREEN WITHOUT SCROLL) -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 flex flex-col lg:flex-row items-stretch justify-center gap-3 max-w-[1600px] mx-auto w-full my-auto overflow-hidden py-1">
     
     <!-- LEFT COLUMN: Live Camera HUD & Voice Visualizer -->
-    <div class="flex flex-col items-center justify-between text-center w-full lg:w-1/2 bg-slate-900/60 border border-slate-800/80 rounded-3xl p-5 shadow-2xl backdrop-blur-md">
+    <div class="flex flex-col items-center justify-between text-center w-full lg:w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-card hover:shadow-card-hover transition-all overflow-hidden">
       
-      <!-- Live Camera Vision HUD Viewfinder -->
-      <div class="relative w-full aspect-4/3 max-w-md rounded-2xl overflow-hidden border-2 border-brand-500/60 shadow-2xl bg-black">
+      <!-- Live Camera Vision Viewfinder (Height capped to maintain viewport budget) -->
+      <div class="relative w-full aspect-16/10 max-h-[220px] md:max-h-[260px] lg:max-h-[280px] rounded-xl overflow-hidden border-2 border-brand-500/40 shadow-card bg-slate-950 flex items-center justify-center">
         <!-- Live Video Element -->
         <video id="kiosk-live-cam" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
         <canvas id="vision-canvas" class="hidden"></canvas>
         
         <!-- Biometric Target Box Overlay -->
-        <div class="absolute inset-4 rounded-2xl border border-dashed border-emerald-400/50 pointer-events-none flex flex-col justify-between p-2">
-          <div class="flex justify-between items-center text-[11px] font-mono text-emerald-400 font-bold bg-slate-950/80 px-2.5 py-1 rounded-md backdrop-blur-sm">
+        <div class="absolute inset-2.5 rounded-xl border border-dashed border-emerald-400/50 pointer-events-none flex flex-col justify-between p-2">
+          <div class="flex justify-between items-center text-[10px] font-mono text-emerald-400 font-bold bg-slate-950/85 px-2.5 py-0.5 rounded-md backdrop-blur-sm border border-emerald-500/20">
             <span id="face-scan-status">🔴 WAITING FOR VISITOR...</span>
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 beacon-active"></span>
           </div>
           <!-- Animated Laser Scan Bar -->
           <div class="absolute left-0 right-0 h-1 hud-scanner animate-scan pointer-events-none"></div>
-          <div class="text-[10px] text-center font-mono text-slate-400 bg-slate-950/80 py-1 rounded">
-            AUTONOMOUS HUMAN FACE RECOGNITION
+          <div class="text-[9px] text-center font-mono text-slate-300 bg-slate-950/85 py-0.5 px-2 rounded border border-slate-800 backdrop-blur-sm">
+            AI BIOMETRIC ARC-FACE &amp; OSNET RE-ID
           </div>
         </div>
 
         <!-- Recognition Banner Overlay -->
-        <div id="recognition-banner" class="absolute bottom-3 left-3 right-3 hidden py-2 px-3 rounded-xl bg-emerald-600/95 text-white text-xs font-bold shadow-xl backdrop-blur-md flex items-center justify-center gap-2">
+        <div id="recognition-banner" class="absolute bottom-2 left-2 right-2 hidden py-1.5 px-3 rounded-lg bg-emerald-600/95 text-white text-xs font-bold shadow-elevated backdrop-blur-md flex items-center justify-center gap-1.5">
           <span>✅</span> <span id="recognition-name">அடையாளம் காணப்பட்டது</span>
         </div>
       </div>
 
       <!-- Spoken Assistant Prompt Banner -->
-      <div class="w-full max-w-md bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 my-3 shadow-xl text-left">
-        <div class="flex items-center justify-between mb-1.5">
-          <p class="text-[11px] font-bold text-brand-400 uppercase tracking-wider" id="agent-role-label">AI Gate Reception Agent</p>
-          <span id="agent-state-pill" class="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-semibold">Ready</span>
+      <div class="w-full bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 my-1.5 text-left shadow-card">
+        <div class="flex items-center justify-between mb-1">
+          <div class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand-500 beacon-active"></span>
+            <p class="text-[10px] font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider font-mono" id="agent-role-label">AI Gate Reception Agent</p>
+          </div>
+          <span id="agent-state-pill" class="text-[9px] px-2 py-0.5 rounded-full bg-brand-100 text-brand-800 dark:bg-slate-800 dark:text-slate-300 font-bold">Ready</span>
         </div>
-        <h2 id="agent-speech" class="text-base md:text-lg font-bold text-white leading-snug">
+        <h2 id="agent-speech" class="text-xs md:text-sm font-bold text-slate-800 dark:text-white leading-snug">
           வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?
         </h2>
       </div>
 
       <!-- Live Speech Analyzer & Audio Level Meter -->
-      <div id="live-speech-card" class="w-full max-w-md bg-slate-950/90 border border-amber-500/40 rounded-2xl p-3 shadow-xl text-left">
-        <div class="flex items-center justify-between mb-1.5">
+      <div id="live-speech-card" class="w-full bg-amber-50/60 dark:bg-slate-950/80 border border-amber-300/60 dark:border-amber-500/40 rounded-xl p-2 shadow-card text-left">
+        <div class="flex items-center justify-between mb-1">
           <div class="flex items-center gap-1.5">
-            <span id="speech-indicator-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500 transition-all"></span>
-            <p class="text-[11px] font-bold text-amber-400 uppercase tracking-wider" id="speech-title-label">🎙️ குரல் பகுப்பாய்வு (Live Subtitles):</p>
+            <span id="speech-indicator-dot" class="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600 transition-all"></span>
+            <p class="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider" id="speech-title-label">🎙️ குரல் பகுப்பாய்வு (Live Subtitles):</p>
           </div>
-          <div id="mic-visualizer" class="flex items-center gap-1 h-3.5 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
-            <span class="v-bar w-1 bg-slate-600 rounded-full h-1 transition-all"></span>
-            <span class="v-bar w-1 bg-slate-600 rounded-full h-2 transition-all"></span>
-            <span class="v-bar w-1 bg-slate-600 rounded-full h-3 transition-all"></span>
-            <span class="v-bar w-1 bg-slate-600 rounded-full h-1.5 transition-all"></span>
-            <span class="v-bar w-1 bg-slate-600 rounded-full h-2.5 transition-all"></span>
+          <div id="mic-visualizer" class="flex items-center gap-1 h-3 px-1.5 py-0.5 rounded bg-white dark:bg-slate-900 border border-amber-200 dark:border-slate-800 shadow-xs">
+            <span class="v-bar w-0.5 bg-slate-400 dark:bg-slate-600 rounded-full h-1 transition-all"></span>
+            <span class="v-bar w-0.5 bg-slate-400 dark:bg-slate-600 rounded-full h-2 transition-all"></span>
+            <span class="v-bar w-0.5 bg-slate-400 dark:bg-slate-600 rounded-full h-2.5 transition-all"></span>
+            <span class="v-bar w-0.5 bg-slate-400 dark:bg-slate-600 rounded-full h-1 transition-all"></span>
           </div>
         </div>
 
-        <div id="user-heard-text" class="text-sm md:text-base text-amber-200 font-bold min-h-[2.5rem] bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800/80 flex items-center">
+        <div id="user-heard-text" class="text-xs text-slate-800 dark:text-amber-200 font-semibold min-h-[1.75rem] bg-white/80 dark:bg-slate-900/90 px-2.5 py-1 rounded-lg border border-amber-200/80 dark:border-slate-800 flex items-center shadow-xs">
           (முன்னால் நின்றாலே AI தானாகப் பேசும்...)
         </div>
       </div>
 
       <!-- Quick Action Controls -->
-      <div class="flex items-center gap-2 mt-3 flex-wrap justify-center w-full max-w-md">
-        <button onclick="startConversationManual()" class="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-teal-500/20 active:scale-95">
-          <span>🔊</span> பேசத் தொடங்கு
+      <div class="flex items-center gap-2 mt-1.5 w-full">
+        <button onclick="startConversationManual()" id="btn-start-convo" class="flex-1 px-3 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer">
+          <span>🔊</span> <span id="btn-start-label">பேசத் தொடங்கு</span>
         </button>
-        <button onclick="triggerVoiceCheck()" id="speak-btn" class="flex-1 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-brand-500/20 active:scale-95">
-          <span>🎙️</span> பேசுக (Speak Now)
+        <button onclick="triggerVoiceCheck()" id="speak-btn" class="flex-1 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer">
+          <span>🎙️</span> <span id="speak-btn-text">பேசுக (Speak Now)</span>
         </button>
-        <button onclick="resetKiosk()" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition active:scale-95">
-          🔄 ரீசெட்
+        <button onclick="resetKiosk()" id="btn-reset" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition active:scale-95 cursor-pointer">
+          🔄 <span id="btn-reset-label">ரீசெட்</span>
         </button>
       </div>
     </div>
 
     <!-- RIGHT COLUMN: Conversational Live Feed & Admitted Status -->
-    <div class="w-full lg:w-1/2 bg-slate-900/90 border border-slate-800/90 rounded-3xl p-5 shadow-2xl flex flex-col justify-between">
+    <div class="w-full lg:w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between overflow-hidden">
       
       <!-- Conversation Header -->
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1.5 mb-1.5 shrink-0">
         <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-200">
-            💬 நேரடி உரையாடல் (Live Conversation Feed)
+          <div class="w-6 h-6 rounded-md bg-brand-50 dark:bg-brand-900/40 border border-brand-200 dark:border-brand-700/50 flex items-center justify-center text-xs shadow-xs">
+            💬
+          </div>
+          <h3 class="text-[11px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200" id="live-convo-title">
+            நேரடி உரையாடல் (Live Conversation Feed)
           </h3>
         </div>
-        <span id="entry-badge" class="px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-slate-800 text-slate-400">
+        <span id="entry-badge" class="px-2 py-0.5 text-[9px] font-bold uppercase rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
           Awaiting Input
         </span>
       </div>
 
-      <!-- Dialogue History Stream Container -->
-      <div id="convo-feed-container" class="flex-1 overflow-y-auto space-y-2.5 pr-1 max-h-[360px] no-scrollbar">
+      <!-- Dialogue History Stream Container (Dynamic max-height to ensure zero viewport scroll) -->
+      <div id="convo-feed-container" class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[170px] md:max-h-[220px] lg:max-h-[240px] no-scrollbar">
         <!-- Initial Agent Welcome Message -->
-        <div class="flex items-start gap-2.5">
-          <div class="w-7 h-7 rounded-lg bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-sm shrink-0">
+        <div class="flex items-start gap-2">
+          <div class="w-7 h-7 rounded-lg bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/80 flex items-center justify-center text-xs shrink-0 shadow-xs">
             🤖
           </div>
-          <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl rounded-tl-none p-3 text-xs text-slate-200 max-w-[85%] shadow-sm">
-            <p class="font-bold text-[10px] text-brand-400 uppercase tracking-wider mb-0.5">AI Security Agent</p>
-            <p id="convo-first-msg">வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?</p>
+          <div class="bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/60 rounded-xl rounded-tl-none p-2.5 text-xs text-slate-800 dark:text-slate-100 max-w-[85%] shadow-card">
+            <p class="font-bold text-[9px] text-brand-700 dark:text-brand-400 uppercase tracking-wider mb-0.5" id="agent-bubble-title">AI Security Agent</p>
+            <p id="convo-first-msg" class="leading-relaxed">வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?</p>
           </div>
         </div>
       </div>
 
       <!-- Live Captured Visitor Intent Badges -->
-      <div id="visitor-extracted-card" class="mt-4 pt-3 border-t border-slate-800/80">
-        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
-          <span>📋 கண்டறியப்பட்ட விவரங்கள் (Identified Details):</span>
-          <span id="process-state-indicator" class="text-brand-400 font-mono">Analyzing...</span>
+      <div id="visitor-extracted-card" class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-800 shrink-0">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 flex items-center justify-between">
+          <span class="flex items-center gap-1 font-display" id="details-section-title">
+            <svg class="w-3.5 h-3.5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <span id="label-extracted-title">கண்டறியப்பட்ட விவரங்கள் (Identified Details):</span>
+          </span>
+          <span id="process-state-indicator" class="text-brand-600 dark:text-brand-400 font-mono text-[10px] font-bold">Ready</span>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5">
-            <span class="text-[10px] text-slate-400 block font-semibold">பெயர் (Name):</span>
-            <span id="card-val-name" class="font-bold text-white text-sm">—</span>
+        <div class="grid grid-cols-2 gap-1.5 text-xs">
+          <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-2 shadow-xs">
+            <span class="text-[9px] text-slate-500 dark:text-slate-400 block font-semibold" id="card-label-name">பெயர் (Name):</span>
+            <span id="card-val-name" class="font-bold text-slate-900 dark:text-white text-xs truncate block">—</span>
           </div>
 
-          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5">
-            <span class="text-[10px] text-slate-400 block font-semibold">நோக்கம் / தளம் (Purpose):</span>
-            <span id="card-val-purpose" class="font-bold text-emerald-400 text-sm">—</span>
+          <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-2 shadow-xs">
+            <span class="text-[9px] text-slate-500 dark:text-slate-400 block font-semibold" id="card-label-purpose">நோக்கம் / தளம் (Purpose):</span>
+            <span id="card-val-purpose" class="font-bold text-brand-700 dark:text-emerald-400 text-xs truncate block">—</span>
           </div>
 
-          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5">
-            <span class="text-[10px] text-slate-400 block font-semibold">மொபைல் எண் (Phone):</span>
-            <span id="card-val-phone" class="font-bold text-amber-400 text-sm font-mono">—</span>
+          <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-2 shadow-xs">
+            <span class="text-[9px] text-slate-500 dark:text-slate-400 block font-semibold" id="card-label-phone">மொபைல் எண் (Phone):</span>
+            <span id="card-val-phone" class="font-bold text-amber-700 dark:text-amber-400 text-xs font-mono truncate block">—</span>
           </div>
 
-          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5">
-            <span class="text-[10px] text-slate-400 block font-semibold">அனுமதிக்கப்பட்ட நேரம் (Stay Time):</span>
-            <span id="card-val-duration" class="font-bold text-cyan-400 text-sm font-mono">—</span>
+          <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-lg p-2 shadow-xs">
+            <span class="text-[9px] text-slate-500 dark:text-slate-400 block font-semibold" id="card-label-duration">அனுமதிக்கப்பட்ட நேரம் (Stay Time):</span>
+            <span id="card-val-duration" class="font-bold text-cyan-700 dark:text-cyan-400 text-xs font-mono truncate block">—</span>
           </div>
         </div>
 
         <!-- Quick Interactive Duration Selector -->
-        <div class="mt-2.5 pt-2 border-t border-slate-800/80">
-          <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-            <span>⏱️ தங்கும் நேரம் (Set Stay Duration):</span>
-            <span id="dur-display" class="text-cyan-400 font-mono font-bold">தேர்வு செய்க (Select)</span>
+        <div id="dynamic-chips-container" class="mt-2 pt-1.5 border-t border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+            <span id="duration-section-title">⏱️ தங்கும் நேரம் (Set Stay Duration):</span>
+            <span id="dur-display" class="text-cyan-600 dark:text-cyan-400 font-mono font-bold">தேர்வு செய்க (Select)</span>
           </div>
           <div class="grid grid-cols-4 gap-1.5">
-            <button type="button" data-dur="15" onclick="setDuration(15)" class="dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition cursor-pointer">15 நிமி (15m)</button>
-            <button type="button" data-dur="30" onclick="setDuration(30)" class="dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition cursor-pointer">30 நிமி (30m)</button>
-            <button type="button" data-dur="60" onclick="setDuration(60)" class="dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition cursor-pointer">1 மணி (1h)</button>
-            <button type="button" data-dur="120" onclick="setDuration(120)" class="dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition cursor-pointer">2 மணி (2h)</button>
+            <button type="button" data-dur="15" onclick="setDuration(15)" class="dur-btn py-1 text-xs font-bold rounded-lg bg-slate-50 hover:bg-brand-50 dark:bg-slate-950 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-brand-400 text-slate-700 dark:text-slate-300 transition shadow-xs cursor-pointer"><span class="dur-label">15 நிமி</span> (15m)</button>
+            <button type="button" data-dur="30" onclick="setDuration(30)" class="dur-btn py-1 text-xs font-bold rounded-lg bg-slate-50 hover:bg-brand-50 dark:bg-slate-950 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-brand-400 text-slate-700 dark:text-slate-300 transition shadow-xs cursor-pointer"><span class="dur-label">30 நிமி</span> (30m)</button>
+            <button type="button" data-dur="60" onclick="setDuration(60)" class="dur-btn py-1 text-xs font-bold rounded-lg bg-slate-50 hover:bg-brand-50 dark:bg-slate-950 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-brand-400 text-slate-700 dark:text-slate-300 transition shadow-xs cursor-pointer"><span class="dur-label">1 மணி</span> (1h)</button>
+            <button type="button" data-dur="120" onclick="setDuration(120)" class="dur-btn py-1 text-xs font-bold rounded-lg bg-slate-50 hover:bg-brand-50 dark:bg-slate-950 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-brand-400 text-slate-700 dark:text-slate-300 transition shadow-xs cursor-pointer"><span class="dur-label">2 மணி</span> (2h)</button>
           </div>
         </div>
 
@@ -265,8 +357,8 @@
       </div>
 
       <!-- Action Confirmation Bar -->
-      <div class="hidden mt-3 pt-2 flex items-center gap-2">
-        <button onclick="submitDirectCheckin()" id="submit-btn" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white font-extrabold text-sm tracking-wide shadow-xl shadow-brand-500/25 transition active:scale-98 flex items-center justify-center gap-2">
+      <div class="hidden mt-2 pt-1 flex items-center gap-2 shrink-0">
+        <button onclick="submitDirectCheckin()" id="submit-btn" class="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-brand-600 via-emerald-600 to-teal-500 hover:from-brand-500 hover:to-teal-400 text-white font-extrabold text-xs tracking-wide shadow-xs transition active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer">
           <span>✅</span> <span id="submit-text">அனுமதி உறுதிசெய்க (Confirm)</span>
         </button>
       </div>
@@ -275,43 +367,60 @@
 
   </main>
 
-  <!-- BIG GREEN TICK MARK MODAL (டிக் மாதிரி வரணும் - ON APPROVED) -->
-  <div id="approved-tick-modal" onclick="if (event.target === this) closeApprovedTickModal()" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 hidden">
-    <!-- Top-Right Close Button -->
-    <button onclick="closeApprovedTickModal()" class="absolute top-5 right-5 w-11 h-11 rounded-full bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 flex items-center justify-center text-lg font-bold shadow-xl transition active:scale-95 cursor-pointer z-20" title="Close (மூடு)">
-      ✕
-    </button>
-    <div class="relative flex items-center justify-center mb-6">
-      <div class="w-40 h-40 rounded-full bg-emerald-500/30 animate-ping absolute"></div>
-      <div class="w-36 h-36 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 border-4 border-emerald-300 flex items-center justify-center shadow-2xl shadow-emerald-500/80 z-10 animate-bounce-once">
-        <svg class="w-20 h-20 text-white drop-shadow-xl" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="4">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
-        </svg>
+  <!-- ========================================================================= -->
+  <!-- 3. APPROVAL MODAL (Matches Admin Panel Modal Aesthetics) -->
+  <!-- ========================================================================= -->
+  <div id="approved-tick-modal" onclick="if (event.target === this) closeApprovedTickModal()" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-elevated flex flex-col items-center text-center relative animate-fadeIn">
+      <!-- Top-Right Close Button -->
+      <button onclick="closeApprovedTickModal()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold shadow-xs transition active:scale-95 cursor-pointer" title="Close (மூடு)">
+        ✕
+      </button>
+
+      <!-- Animated Green Success Checkmark Badge -->
+      <div class="relative flex items-center justify-center my-3">
+        <div class="w-24 h-24 rounded-full bg-emerald-500/20 animate-ping absolute"></div>
+        <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 border-3 border-emerald-200 dark:border-emerald-600/50 flex items-center justify-center shadow-elevated z-10 animate-bounce-once">
+          <svg class="w-10 h-10 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
       </div>
+
+      <h2 class="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1 font-display" id="approved-title">
+        அனுமதி அளிக்கப்பட்டது
+      </h2>
+      <p class="text-sm font-bold text-brand-600 dark:text-emerald-400 mb-3" id="approved-subtitle">
+        ஓகே, நீங்கள் உள்ளே போகலாம்! (You May Enter)
+      </p>
+
+      <div class="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[10px] text-slate-600 dark:text-emerald-300 font-mono tracking-wider shadow-xs flex items-center gap-1.5 mb-4">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 beacon-active"></span>
+        <span id="approved-timer-text">CHECK-IN CONFIRMED • OVERSTAY TIMER ACTIVE</span>
+      </div>
+
+      <!-- Bottom Dismiss Button -->
+      <button onclick="closeApprovedTickModal()" id="btn-modal-close" class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-md active:scale-95 cursor-pointer">
+        <span>✕</span> <span id="btn-modal-close-label">மூடு (Close)</span>
+      </button>
     </div>
-    <h2 class="text-3xl font-extrabold text-white tracking-tight mb-2 text-center" id="approved-title">
-      அனுமதி அளிக்கப்பட்டது
-    </h2>
-    <p class="text-xl font-bold text-emerald-400 mb-4 text-center" id="approved-subtitle">
-      ஓகே, நீங்கள் உள்ளே போகலாம்! (You May Enter)
-    </p>
-    <div class="px-5 py-2.5 rounded-2xl bg-slate-900 border border-emerald-500/40 text-xs text-emerald-300 font-mono tracking-wider shadow-inner flex items-center gap-2 mb-4">
-      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-      CHECK-IN CONFIRMED • OVERSTAY TIMER ACTIVE
-    </div>
-    <!-- Bottom Dismiss Button -->
-    <button onclick="closeApprovedTickModal()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-xs font-bold transition flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer">
-      <span>✕</span> மூடு (Close)
-    </button>
   </div>
 
-  <!-- FOOTER -->
-  <footer class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-800/80 pt-2">
-    <span>EcoLifyBuddy Smart Security Kiosk • Overstay Active Monitoring</span>
-    <span class="flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-      <span id="vision-status-text">Face Recognition Online</span>
-    </span>
+  <!-- ========================================================================= -->
+  <!-- 4. EXECUTIVE FOOTER (Matches Admin Panel, Fixed Height, Compact) -->
+  <!-- ========================================================================= -->
+  <footer class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 shadow-xs shrink-0">
+    <div class="flex items-center gap-1.5 font-medium">
+      <span class="font-display font-bold text-slate-800 dark:text-slate-200">EcoLifyBuddy</span>
+      <span>•</span>
+      <span id="footer-system-text">Autonomous Gate Intelligence &amp; Overstay Tracker</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="flex items-center gap-1 font-mono text-[10px]">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 beacon-active"></span>
+        <span id="vision-status-text">Face Recognition Online</span>
+      </span>
+    </div>
   </footer>
 
   <!-- SCRIPT -->
@@ -362,6 +471,189 @@
       return negPatterns.some(p => p.test(t));
     }
 
+    // Comprehensive UI Translations Dictionary
+    const UI_TRANSLATIONS = {
+      'ta-IN': {
+        headerBadge: 'Autonomous Gate Kiosk',
+        headerSubtitle: 'தானியங்கி குரல் & முக அங்கீகார செக்-இன் • Real-time AI Multimodal Assistant',
+        tabEntry: 'நுழைவு (Entry)',
+        tabExit: 'வெளியேறுதல் (Exit)',
+        audioActive: 'குரல் தயார் (Audio Active)',
+        langToggle: 'தமிழ் (Tamil)',
+        roleEntry: 'AI Gate Reception Agent (நுழைவு வாயில்)',
+        roleExit: 'AI Gate Checkout Agent (வெளியேறுதல் வாயில்)',
+        promptEntry: 'வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?',
+        promptExit: 'வணக்கம்! நீங்கள் வெளியேறுவதை பதிவு செய்ய கேமராவைப் பார்க்கவும்.',
+        subtitlesTitle: '🎙️ குரல் பகுப்பாய்வு (Live Subtitles):',
+        subtitlesPlaceholder: '(முன்னால் நின்றாலே AI தானாகப் பேசும்...)',
+        btnStart: 'பேசத் தொடங்கு',
+        btnSpeakIdle: 'பேசுக (Speak Now)',
+        btnSpeakListening: 'பேசி முடித்தேன் (Done Speaking)',
+        btnSpeakSpeaking: 'பதிலளிக்கிறது (Speaking...)',
+        btnReset: 'ரீசெட்',
+        convoTitle: 'நேரடி உரையாடல் (Live Conversation Feed)',
+        awaitingInput: 'Awaiting Input',
+        agentBubbleTitle: 'AI Security Agent',
+        visitorBubbleTitle: 'பார்வையாளர் (Visitor)',
+        detailsTitle: 'கண்டறியப்பட்ட விவரங்கள் (Identified Details):',
+        cardName: 'பெயர் (Name):',
+        cardPurpose: 'நோக்கம் / தளம் (Purpose):',
+        cardPhone: 'மொபைல் எண் (Phone):',
+        cardDuration: 'அனுமதிக்கப்பட்ட நேரம் (Stay Time):',
+        durationTitle: '⏱️ தங்கும் நேரம் (Set Stay Duration):',
+        durSelect: 'தேர்வு செய்க (Select)',
+        dur15m: '15 நிமி (15m)',
+        dur30m: '30 நிமி (30m)',
+        dur1h: '1 மணி (1h)',
+        dur2h: '2 மணி (2h)',
+        confirmEntry: 'செக்-இன் செய்க (Confirm Check-in)',
+        confirmExit: 'வெளியேறுதல் பதிவு செய்க (Confirm Exit)',
+        approvedTitleEntry: 'அனுமதி அளிக்கப்பட்டது',
+        approvedSubtitleEntry: 'ஓகே, நீங்கள் உள்ளே போகலாம்! (You May Enter)',
+        approvedTitleExit: 'வெளியேறுதல் பதிவு செய்யப்பட்டது',
+        approvedSubtitleExit: 'நன்றி! நல்ல நாள் ஆக அமையட்டும் (Have a safe trip)',
+        modalTimerText: 'CHECK-IN CONFIRMED • OVERSTAY TIMER ACTIVE',
+        modalClose: 'மூடு (Close)',
+        footerSystem: 'EcoLifyBuddy Smart Security Kiosk • Overstay Monitoring',
+        visionOnline: 'Face Recognition Online'
+      },
+      'en-US': {
+        headerBadge: 'Autonomous Gate Kiosk',
+        headerSubtitle: 'Autonomous Voice & Biometric Kiosk • Real-time AI Multimodal Assistant',
+        tabEntry: 'Entry Gate',
+        tabExit: 'Exit Gate',
+        audioActive: 'Audio Ready (Active)',
+        langToggle: 'English',
+        roleEntry: 'AI Gate Reception Agent (Entry)',
+        roleExit: 'AI Gate Checkout Agent (Exit)',
+        promptEntry: 'Welcome! Please state your name, purpose of visit, mobile number, and how long you will stay inside.',
+        promptExit: 'Welcome! Please look into the camera to confirm your exit checkout.',
+        subtitlesTitle: '🎙️ Live Subtitles (Voice Input):',
+        subtitlesPlaceholder: '(Stand in front of the camera or tap "Speak Now")...',
+        btnStart: 'Start Conversation',
+        btnSpeakIdle: 'Speak Now',
+        btnSpeakListening: 'Done Speaking',
+        btnSpeakSpeaking: 'Responding...',
+        btnReset: 'Reset',
+        convoTitle: 'Live Conversation Feed',
+        awaitingInput: 'Awaiting Input',
+        agentBubbleTitle: 'AI Security Agent',
+        visitorBubbleTitle: 'Visitor',
+        detailsTitle: 'Identified Visitor Details:',
+        cardName: 'Full Name:',
+        cardPurpose: 'Purpose / Host:',
+        cardPhone: 'Phone Number:',
+        cardDuration: 'Approved Stay Time:',
+        durationTitle: '⏱️ Stay Duration:',
+        durSelect: 'Select Duration',
+        dur15m: '15 Minutes',
+        dur30m: '30 Minutes',
+        dur1h: '1 Hour',
+        dur2h: '2 Hours',
+        confirmEntry: 'Confirm Check-in',
+        confirmExit: 'Confirm Exit Checkout',
+        approvedTitleEntry: 'Entry Approved',
+        approvedSubtitleEntry: 'Verified! You may now proceed inside.',
+        approvedTitleExit: 'Exit Recorded',
+        approvedSubtitleExit: 'Thank you for visiting! Have a wonderful day.',
+        modalTimerText: 'CHECK-IN CONFIRMED • OVERSTAY TIMER ACTIVE',
+        modalClose: 'Close',
+        footerSystem: 'EcoLifyBuddy Smart Security Kiosk • Overstay Monitoring',
+        visionOnline: 'Face Recognition Online'
+      }
+    };
+
+    function updateEntireUIStrings() {
+      const isExit = currentGateMode === 'exit';
+      const t = UI_TRANSLATIONS[currentLang] || UI_TRANSLATIONS['en-US'];
+
+      // Header
+      const sub = document.getElementById('header-subtitle');
+      if (sub) sub.innerText = t.headerSubtitle;
+      const tabEn = document.getElementById('tab-entry-text');
+      if (tabEn) tabEn.innerText = t.tabEntry;
+      const tabEx = document.getElementById('tab-exit-text');
+      if (tabEx) tabEx.innerText = t.tabExit;
+      const audLbl = document.getElementById('audio-status-label');
+      if (audLbl && audioContextUnlocked) audLbl.innerText = t.audioActive;
+      const langLbl = document.getElementById('lang-label');
+      if (langLbl) langLbl.innerText = t.langToggle;
+
+      // Agent prompt & role
+      const roleLbl = document.getElementById('agent-role-label');
+      if (roleLbl) roleLbl.innerText = isExit ? t.roleExit : t.roleEntry;
+      
+      if (convStep === 'IDLE') {
+        const speechEl = document.getElementById('agent-speech');
+        if (speechEl) speechEl.innerText = isExit ? t.promptExit : t.promptEntry;
+        const heardEl = document.getElementById('user-heard-text');
+        if (heardEl) heardEl.innerText = t.subtitlesPlaceholder;
+      }
+
+      // Live Subtitle title & buttons
+      const subTitle = document.getElementById('speech-title-label');
+      if (subTitle) subTitle.innerText = t.subtitlesTitle;
+      const btnStartLbl = document.getElementById('btn-start-label');
+      if (btnStartLbl) btnStartLbl.innerText = t.btnStart;
+      const btnResetLbl = document.getElementById('btn-reset-label');
+      if (btnResetLbl) btnResetLbl.innerText = t.btnReset;
+
+      // Speak button text
+      const speakBtnText = document.getElementById('speak-btn-text');
+      if (speakBtnText && !isListening) speakBtnText.innerText = t.btnSpeakIdle;
+
+      // Conversation header & titles
+      const liveConvoTitle = document.getElementById('live-convo-title');
+      if (liveConvoTitle) liveConvoTitle.innerText = t.convoTitle;
+      const agentBubbleTitle = document.getElementById('agent-bubble-title');
+      if (agentBubbleTitle) agentBubbleTitle.innerText = t.agentBubbleTitle;
+
+      // Visitor card details
+      const lblExtTitle = document.getElementById('label-extracted-title');
+      if (lblExtTitle) lblExtTitle.innerText = t.detailsTitle;
+      const cName = document.getElementById('card-label-name');
+      if (cName) cName.innerText = t.cardName;
+      const cPurpose = document.getElementById('card-label-purpose');
+      if (cPurpose) cPurpose.innerText = t.cardPurpose;
+      const cPhone = document.getElementById('card-label-phone');
+      if (cPhone) cPhone.innerText = t.cardPhone;
+      const cDuration = document.getElementById('card-label-duration');
+      if (cDuration) cDuration.innerText = t.cardDuration;
+
+      // Duration selector
+      const durSecTitle = document.getElementById('duration-section-title');
+      if (durSecTitle) durSecTitle.innerText = t.durationTitle;
+      if (!selectedDuration) {
+        const durDis = document.getElementById('dur-display');
+        if (durDis) durDis.innerText = t.durSelect;
+      }
+
+      // Duration buttons
+      const durBtns = document.querySelectorAll('.dur-btn');
+      if (durBtns.length >= 4) {
+        durBtns[0].innerText = t.dur15m;
+        durBtns[1].innerText = t.dur30m;
+        durBtns[2].innerText = t.dur1h;
+        durBtns[3].innerText = t.dur2h;
+      }
+
+      // Submit button
+      const submitText = document.getElementById('submit-text');
+      if (submitText) submitText.innerText = isExit ? t.confirmExit : t.confirmEntry;
+
+      // Modal elements
+      const modalCloseLbl = document.getElementById('btn-modal-close-label');
+      if (modalCloseLbl) modalCloseLbl.innerText = t.modalClose;
+      const modalTimer = document.getElementById('approved-timer-text');
+      if (modalTimer) modalTimer.innerText = t.modalTimerText;
+
+      // Footer
+      const footerSys = document.getElementById('footer-system-text');
+      if (footerSys) footerSys.innerText = t.footerSystem;
+      const visOnline = document.getElementById('vision-status-text');
+      if (visOnline) visOnline.innerText = t.visionOnline;
+    }
+
     // Apply Gate Mode (Entry vs Exit) UI adaptations
     function applyGateModeStyles() {
       const isExit = currentGateMode === 'exit';
@@ -369,28 +661,24 @@
       const exitTab = document.getElementById('gate-exit-tab');
 
       if (isExit) {
-        if (exitTab) exitTab.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-amber-600 text-white shadow-xs';
-        if (entryTab) entryTab.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-400 hover:text-white';
+        if (exitTab) exitTab.className = 'px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 bg-amber-600 text-white shadow-xs';
+        if (entryTab) entryTab.className = 'px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white';
         
         document.title = "EcoLifyBuddy • AI Exit Gate Kiosk";
-        const roleLbl = document.getElementById('agent-role-label');
-        if (roleLbl) roleLbl.innerText = "AI Gate Checkout Agent (வெளியேறுதல் வாயில்)";
-        const speechEl = document.getElementById('agent-speech');
-        if (speechEl) speechEl.innerText = "வணக்கம்! நீங்கள் வெளியேறுவதை பதிவு செய்ய கேமராவைப் பார்க்கவும்.";
         
         // Hide duration picker on exit
         const chipsCont = document.getElementById('dynamic-chips-container');
         if (chipsCont) chipsCont.classList.add('hidden');
-        const submitText = document.getElementById('submit-text');
-        if (submitText) submitText.innerText = "வெளியேறுதல் பதிவு செய்க (Confirm Exit)";
       } else {
-        if (entryTab) entryTab.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-brand-600 text-white shadow-xs';
-        if (exitTab) exitTab.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-400 hover:text-white';
+        if (entryTab) entryTab.className = 'px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 bg-brand-600 text-white shadow-xs';
+        if (exitTab) exitTab.className = 'px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white';
         
         document.title = "EcoLifyBuddy • AI Entry Gate Kiosk";
-        const roleLbl = document.getElementById('agent-role-label');
-        if (roleLbl) roleLbl.innerText = "AI Gate Reception Agent (நுழைவு வாயில்)";
+        const chipsCont = document.getElementById('dynamic-chips-container');
+        if (chipsCont) chipsCont.classList.remove('hidden');
       }
+
+      updateEntireUIStrings();
     }
 
     // Clock
@@ -403,8 +691,9 @@
     function unlockAudioContext(fromButton = false) {
       if (audioContextUnlocked) return;
       audioContextUnlocked = true;
+      const t = UI_TRANSLATIONS[currentLang] || UI_TRANSLATIONS['ta-IN'];
       const btnLabel = document.getElementById('audio-status-label');
-      if (btnLabel) btnLabel.innerText = '🔊 குரல் தயார் (Audio Active)';
+      if (btnLabel) btnLabel.innerText = t.audioActive;
       
       // Warm up Web Speech
       if ('speechSynthesis' in window) {
@@ -414,24 +703,24 @@
       }
       
       if (fromButton && convStep === 'IDLE') {
-        const prompt = currentLang === 'ta-IN'
-          ? "வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?"
-          : "Welcome! Please state your name, purpose, phone number, and how long you will stay inside.";
+        const isExit = currentGateMode === 'exit';
+        const prompt = isExit ? t.promptExit : t.promptEntry;
         speakText(prompt);
       }
     }
 
     // Set Duration Helper
     function setDuration(mins) {
+      const t = UI_TRANSLATIONS[currentLang] || UI_TRANSLATIONS['ta-IN'];
       if (!mins) {
         selectedDuration = null;
         if (activeVisitorData) activeVisitorData.expected_duration_minutes = null;
         const durEl = document.getElementById('dur-display');
-        if (durEl) durEl.innerText = 'தேர்வு செய்க (Select)';
+        if (durEl) durEl.innerText = t.durSelect;
         const cardDur = document.getElementById('card-val-duration');
         if (cardDur) cardDur.innerText = '—';
         document.querySelectorAll('.dur-btn').forEach(b => {
-          b.className = 'dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition';
+          b.className = 'dur-btn py-1 text-xs font-bold rounded-lg bg-slate-50 hover:bg-brand-50 dark:bg-slate-950 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-brand-400 text-slate-700 dark:text-slate-300 transition shadow-xs cursor-pointer';
         });
         return;
       }
@@ -440,11 +729,11 @@
       let durText;
       if (selectedDuration >= 1440) {
         const d = Math.round(selectedDuration / 1440);
-        durText = `${d} நாட்கள் (${d} ${d === 1 ? 'day' : 'days'})`;
+        durText = currentLang === 'ta-IN' ? `${d} நாட்கள் (${d} days)` : `${d} ${d === 1 ? 'day' : 'days'}`;
       } else if (selectedDuration >= 60) {
-        durText = `${selectedDuration / 60} மணி நேரம் (${(selectedDuration/60).toFixed(1)}h)`;
+        durText = currentLang === 'ta-IN' ? `${selectedDuration / 60} மணி நேரம் (${(selectedDuration/60).toFixed(1)}h)` : `${(selectedDuration/60).toFixed(1)} Hours`;
       } else {
-        durText = `${selectedDuration} நிமிடங்கள்`;
+        durText = currentLang === 'ta-IN' ? `${selectedDuration} நிமிடங்கள்` : `${selectedDuration} Minutes`;
       }
       const durEl = document.getElementById('dur-display');
       if (durEl) durEl.innerText = durText;
@@ -452,24 +741,27 @@
       if (cardDur) cardDur.innerText = durText;
       document.querySelectorAll('.dur-btn').forEach(b => {
         if (parseInt(b.getAttribute('data-dur')) === selectedDuration) {
-          b.className = 'dur-btn py-1.5 text-xs font-bold rounded-lg bg-brand-600/30 border border-brand-500 text-brand-300 transition';
+          b.className = 'dur-btn py-1 text-xs font-bold rounded-lg bg-brand-50 dark:bg-brand-950/60 border-2 border-brand-500 text-brand-700 dark:text-brand-300 transition shadow-xs cursor-pointer';
         } else {
-          b.className = 'dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition';
+          b.className = 'dur-btn py-1 text-xs font-bold rounded-lg bg-slate-50 hover:bg-brand-50 dark:bg-slate-950 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-brand-400 text-slate-700 dark:text-slate-300 transition shadow-xs cursor-pointer';
         }
       });
     }
 
-    // Toggle Language
+    // Toggle Language between Tamil and English with complete instant UI update
     function toggleLanguage() {
+      const isExit = currentGateMode === 'exit';
       if (currentLang === 'ta-IN') {
         currentLang = 'en-US';
-        document.getElementById('lang-label').innerText = 'English';
-        speakText("Welcome to EcoLifyBuddy. Please state your name, purpose of visit, and how long you will stay.");
       } else {
         currentLang = 'ta-IN';
-        document.getElementById('lang-label').innerText = 'தமிழ் (Tamil)';
-        speakText("வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?");
       }
+
+      updateEntireUIStrings();
+
+      const t = UI_TRANSLATIONS[currentLang];
+      const prompt = isExit ? t.promptExit : t.promptEntry;
+      speakText(prompt);
     }
 
     // =========================================================================
@@ -555,22 +847,22 @@
       if (speaker === 'ai') {
         row.className = 'flex items-start gap-2.5 animate-fadeIn';
         row.innerHTML = `
-          <div class="w-7 h-7 rounded-lg bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-sm shrink-0">
+          <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/80 flex items-center justify-center text-sm shrink-0 shadow-xs">
             🤖
           </div>
-          <div class="bg-slate-800/90 border border-slate-700/60 rounded-2xl rounded-tl-none p-3 text-xs text-slate-100 max-w-[85%] shadow-sm">
-            <p class="font-bold text-[10px] text-brand-400 uppercase tracking-wider mb-0.5">AI Security Agent</p>
+          <div class="bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/60 rounded-2xl rounded-tl-none p-3.5 text-xs text-slate-800 dark:text-slate-100 max-w-[85%] shadow-card">
+            <p class="font-bold text-[10px] text-brand-700 dark:text-brand-400 uppercase tracking-wider mb-1">AI Security Agent</p>
             <p class="leading-relaxed">${escapeHtml(text)}</p>
           </div>
         `;
       } else {
         row.className = 'flex items-end justify-end gap-2.5 animate-fadeIn';
         row.innerHTML = `
-          <div class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl rounded-tr-none p-3 text-xs max-w-[85%] shadow-md">
-            <p class="font-bold text-[10px] text-emerald-200 uppercase tracking-wider mb-0.5 text-right">பார்வையாளர் (Visitor)</p>
+          <div class="bg-gradient-to-r from-brand-600 via-emerald-600 to-teal-600 text-white rounded-2xl rounded-tr-none p-3.5 text-xs max-w-[85%] shadow-md">
+            <p class="font-bold text-[10px] text-emerald-100 uppercase tracking-wider mb-1 text-right">பார்வையாளர் (Visitor)</p>
             <p class="leading-relaxed font-semibold">${escapeHtml(text)}</p>
           </div>
-          <div class="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-sm shrink-0">
+          <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-700 flex items-center justify-center text-sm shrink-0 shadow-xs">
             👤
           </div>
         `;
@@ -820,26 +1112,27 @@
     function setAgentState(state) {
       const pill = document.getElementById('agent-state-pill');
       const speakBtn = document.getElementById('speak-btn');
+      const t = UI_TRANSLATIONS[currentLang] || UI_TRANSLATIONS['ta-IN'];
       if (state === 'speaking') {
         pill.innerText = '🔊 Speaking';
-        pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-brand-500/30 text-brand-300 font-bold';
+        pill.className = 'text-[9px] px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-600 dark:text-brand-300 font-bold';
         if (speakBtn) {
-          speakBtn.className = 'px-4 py-2.5 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold';
-          speakBtn.innerHTML = '<span>🔊</span> பதிலளிக்கிறது (Speaking...)';
+          speakBtn.className = 'flex-1 px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-semibold cursor-not-allowed';
+          speakBtn.innerHTML = `<span>🔊</span> <span id="speak-btn-text">${t.btnSpeakSpeaking}</span>`;
         }
       } else if (state === 'listening') {
         pill.innerText = '🔴 Listening';
-        pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-rose-500/30 text-rose-300 font-bold animate-pulse';
+        pill.className = 'text-[9px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-300 font-bold animate-pulse';
         if (speakBtn) {
-          speakBtn.className = 'px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-rose-500/30 animate-pulse';
-          speakBtn.innerHTML = '<span>🛑</span> பேசி முடித்தேன் (Done Speaking)';
+          speakBtn.className = 'flex-1 px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-md shadow-rose-500/30 animate-pulse cursor-pointer';
+          speakBtn.innerHTML = `<span>🛑</span> <span id="speak-btn-text">${t.btnSpeakListening}</span>`;
         }
       } else {
         pill.innerText = 'Ready';
-        pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-semibold';
+        pill.className = 'text-[9px] px-2 py-0.5 rounded-full bg-brand-100 text-brand-800 dark:bg-slate-800 dark:text-slate-300 font-bold';
         if (speakBtn) {
-          speakBtn.className = 'px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20 active:scale-95';
-          speakBtn.innerHTML = '<span>🎙️</span> பேசுக (Speak Now)';
+          speakBtn.className = 'flex-1 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs active:scale-95 cursor-pointer';
+          speakBtn.innerHTML = `<span>🎙️</span> <span id="speak-btn-text">${t.btnSpeakIdle}</span>`;
         }
       }
     }
@@ -1769,16 +2062,17 @@
       const ind = document.getElementById('process-state-indicator');
       if (ind) ind.innerText = 'Ready';
 
+      const t = UI_TRANSLATIONS[currentLang] || UI_TRANSLATIONS['ta-IN'];
       const feedContainer = document.getElementById('convo-feed-container');
       if (feedContainer) {
         feedContainer.innerHTML = `
-          <div class="flex items-start gap-2.5">
-            <div class="w-7 h-7 rounded-lg bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-sm shrink-0">
+          <div class="flex items-start gap-2">
+            <div class="w-7 h-7 rounded-lg bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/80 flex items-center justify-center text-xs shrink-0 shadow-xs">
               🤖
             </div>
-            <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl rounded-tl-none p-3 text-xs text-slate-200 max-w-[85%] shadow-sm">
-              <p class="font-bold text-[10px] text-brand-400 uppercase tracking-wider mb-0.5">AI Security Agent</p>
-              <p id="convo-first-msg">${currentGateMode === 'exit' ? 'வணக்கம்! நீங்கள் வெளியேறுவதை பதிவு செய்ய கேமராவைப் பார்க்கவும்.' : 'வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?'}</p>
+            <div class="bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/60 rounded-xl rounded-tl-none p-2.5 text-xs text-slate-800 dark:text-slate-100 max-w-[85%] shadow-card">
+              <p class="font-bold text-[9px] text-brand-700 dark:text-brand-400 uppercase tracking-wider mb-0.5" id="agent-bubble-title">${t.agentBubbleTitle}</p>
+              <p id="convo-first-msg" class="leading-relaxed">${currentGateMode === 'exit' ? t.promptExit : t.promptEntry}</p>
             </div>
           </div>
         `;
@@ -1787,35 +2081,29 @@
       document.getElementById('v-name').value = '';
       document.getElementById('v-company').value = '';
       document.getElementById('v-phone').value = '';
-      document.getElementById('user-heard-text').innerText = '(முன்னால் நின்றாலே AI தானாகப் பேசும் / அல்லது "பேசுக" பட்டனைத் தொடவும்)';
+      document.getElementById('user-heard-text').innerText = t.subtitlesPlaceholder;
       const dot = document.getElementById('speech-indicator-dot');
-      if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+      if (dot) dot.className = 'w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600';
       const titleLbl = document.getElementById('speech-title-label');
-      if (titleLbl) titleLbl.innerText = currentLang === 'ta-IN' ? '🎙️ நீங்கள் பேசியது (Live Subtitles):' : '🎙️ Live Subtitles:';
+      if (titleLbl) titleLbl.innerText = t.subtitlesTitle;
       const mInput = document.getElementById('manual-speech-input');
       if (mInput) mInput.value = '';
       
-      if (currentGateMode === 'exit') {
-        document.getElementById('agent-speech').innerText = currentLang === 'ta-IN'
-          ? 'வணக்கம்! நீங்கள் வெளியேறுவதை பதிவு செய்ய கேமராவைப் பார்க்கவும்.'
-          : 'Welcome! Please face the camera to record your exit.';
-      } else {
-        document.getElementById('agent-speech').innerText = currentLang === 'ta-IN' 
-          ? 'வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?'
-          : 'Welcome! Please state your name, purpose of visit, mobile number, and how long you will stay inside.';
-      }
+      document.getElementById('agent-speech').innerText = currentGateMode === 'exit' ? t.promptExit : t.promptEntry;
       
       setDuration(null);
       setAgentState('idle');
-      document.getElementById('entry-badge').innerText = 'Awaiting Input';
-      document.getElementById('entry-badge').className = 'px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-slate-800 text-slate-400';
+      document.getElementById('entry-badge').innerText = t.awaitingInput;
+      document.getElementById('entry-badge').className = 'px-2 py-0.5 text-[9px] font-bold uppercase rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
       const btn = document.getElementById('submit-btn');
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = currentGateMode === 'exit'
-          ? '<span>🚶</span> <span>வெளியேறுதல் பதிவு செய்க (Confirm Exit)</span>'
-          : '<span>📸</span> <span>செக்-இன் செய்க (Confirm Check-in)</span>';
+          ? `<span>🚶</span> <span>${t.confirmExit}</span>`
+          : `<span>📸</span> <span>${t.confirmEntry}</span>`;
       }
+
+      updateEntireUIStrings();
 
       // 4-second cooldown before auto-triggering on the next person
       setTimeout(() => {
