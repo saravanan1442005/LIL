@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1920px;
+    height: 1080px;
+    background: #FFFFFF;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+  .table-wrapper {
+    width: 1820px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse; /* NO GAP BETWEEN ROWS */
+    border: 2px solid #CBD5E1;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  th {
+    background: #1E3A8A;
+    color: #FFFFFF;
+    font-size: 19px;
+    font-weight: 700;
+    padding: 20px 24px;
+    text-align: left;
+    letter-spacing: 0.3px;
+    border-bottom: 2px solid #0F172A;
+  }
+  th:first-child { width: 21%; }
+  th:nth-child(2) { width: 25%; }
+  th:nth-child(3) { width: 25%; }
+  th:last-child { width: 29%; }
+  
+  tr.data-row {
+    border-bottom: 1.5px solid #E2E8F0; /* Clean thin divider, zero gap */
+  }
+  tr.data-row:nth-child(even) {
+    background: #F8FAFC;
+  }
+  tr.data-row:nth-child(odd) {
+    background: #FFFFFF;
+  }
+  tr.data-row:last-child {
+    border-bottom: none;
+  }
+  
+  tr.data-row td {
+    padding: 19px 24px; /* Comfortably fills the 16:9 slide vertically without awkward empty voids */
+    vertical-align: middle;
+    font-size: 16.5px;
+    line-height: 1.45;
+  }
+  tr.data-row td:first-child {
+    font-weight: 700;
+    color: #0F172A;
+    border-right: 1.5px solid #E2E8F0;
+  }
+  tr.data-row td:nth-child(2) {
+    color: #475569;
+    border-right: 1.5px solid #E2E8F0;
+  }
+  tr.data-row td:nth-child(3) {
+    border-right: 1.5px solid #E2E8F0;
+    background-color: rgba(236, 253, 245, 0.5);
+  }
+  tr.data-row td:last-child {
+    color: #1E3A8A;
+    font-weight: 600;
+  }
+  
+  .our-title {
+    color: #065F46;
+    font-weight: 700;
+    font-size: 17px;
+    display: block;
+  }
+  .our-sub {
+    font-size: 14px;
+    font-weight: 500;
+    color: #047857;
+  }
+</style>
+</head>
+<body>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature / Capability</th>
+          <th>Existing Systems</th>
+          <th>Our EcoLifyBuddy System</th>
+          <th>Why Ours is Best (Advantage)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="data-row">
+          <td>1. Visitor Check-In</td>
+          <td>Slow manual paper registers or cumbersome touchscreen forms</td>
+          <td><span class="our-title">Bilingual Voice AI Kiosk</span><span class="our-sub">(Tamil &amp; English speech)</span></td>
+          <td>Touchless &amp; natural spoken check-in; verifies stay duration and blocks duplicate entry.</td>
+        </tr>
+        <tr class="data-row">
+          <td>2. Object &amp; Person Detection</td>
+          <td>Slow processing; misses small objects in dense or crowded areas</td>
+          <td><span class="our-title">Real-Time High-Speed AI Vision</span><span class="our-sub">(YOLO Backbone)</span></td>
+          <td>Runs at 32+ FPS on live video; simultaneously detects people and carried items.</td>
+        </tr>
+        <tr class="data-row">
+          <td>3. Movement Tracking</td>
+          <td>Loses track of people behind obstacles; frequent identity switches</td>
+          <td><span class="our-title">Smart Continuous Tracking</span><span class="our-sub">(ByteTrack &amp; Kalman Filter)</span></td>
+          <td>Maintains unbroken paths without mixing IDs, even when pedestrians cross in crowds.</td>
+        </tr>
+        <tr class="data-row">
+          <td>4. Visitor Recognition</td>
+          <td>Cannot recognize returning visitors across distant gates or days</td>
+          <td><span class="our-title">Appearance Re-ID &amp; Face Matching</span><span class="our-sub">(512-D Vector Search)</span></td>
+          <td>Sub-100ms vector lookup across campus; instantly recognizes recurring visitors and watchlists.</td>
+        </tr>
+        <tr class="data-row">
+          <td>5. Violation Detection (Littering)</td>
+          <td>Frequent false alarms on bags/chairs; relies on fatigued human guards</td>
+          <td><span class="our-title">Smart Behavioral Rule Engine</span><span class="our-sub">(Perspective-Normalized)</span></td>
+          <td>Only triggers when an item is actually carried, dropped, and abandoned away from dustbins.</td>
+        </tr>
+        <tr class="data-row">
+          <td>6. Enforcing Deterrence</td>
+          <td>Delayed postal notices sent weeks later; completely ignored</td>
+          <td><span class="our-title">Instant Exit Turnstile Lockout</span><span class="our-sub">(&amp; Audio-Visual Warning)</span></td>
+          <td>Physically intercepts violators at exit gates with locked barriers and sirens before escape.</td>
+        </tr>
+        <tr class="data-row">
+          <td>7. Citizen Privacy (DPDP Act)</td>
+          <td>Raw video recording saves everyone without consent (privacy violation)</td>
+          <td><span class="our-title">Automatic Edge Face Blurring</span><span class="our-sub">(&amp; Scheduled Auto-Purge)</span></td>
+          <td>Fully DPDP Act 2023 compliant: automatically blurs innocent bystanders and purges departed logs.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

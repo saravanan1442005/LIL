@@ -3,11 +3,11 @@ Detects persons and carried objects of interest, maintains per-camera track IDs,
 and evaluates virtual tripwires and zone containment rules.
 """
 import os
-import cv2
-import numpy as np
+import cv2  # pyrefly: ignore[missing-import]  # type: ignore
+import numpy as np  # pyrefly: ignore[missing-import]  # type: ignore
 import logging
 from typing import List, Dict, Any, Tuple, Optional
-from ultralytics import YOLO
+from ultralytics import YOLO  # pyrefly: ignore[missing-import]  # type: ignore
 from services.geometry import check_line_crossing, point_in_polygon
 
 logger = logging.getLogger("ecolifybuddy.detector")

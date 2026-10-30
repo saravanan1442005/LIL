@@ -218,7 +218,7 @@ def test_exit_camera_auto_records_event(client, admin_headers):
         assert is_visitor_present(session, visitor.id) is True
 
         # Simulate exit camera auto-recording
-        exit_event = record_gate_event(session, visitor.id, "EXIT", source="FACE", camera_id=5)
+        exit_event = record_gate_event(session, visitor.id, "EXIT", source="FACE", camera_id=1)
         session.commit()
         assert exit_event.event_type == "EXIT"
         assert is_visitor_present(session, visitor.id) is False

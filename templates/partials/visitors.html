@@ -89,6 +89,7 @@
             <th class="p-3.5">Category</th>
             <th class="p-3.5">Assigned Label / Notes</th>
             <th class="p-3.5">Presence</th>
+            <th class="p-3.5">Stay Countdown</th>
             <th class="p-3.5">Total Visits</th>
             <th class="p-3.5">First Seen</th>
             <th class="p-3.5">Last Seen</th>
@@ -96,7 +97,7 @@
           </tr>
         </thead>
         <tbody id="visitors-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
-          <tr><td colspan="10" class="p-8 text-center text-slate-400">Loading visitor directory...</td></tr>
+          <tr><td colspan="11" class="p-8 text-center text-slate-400">Loading visitor directory...</td></tr>
         </tbody>
       </table>
     </div>
@@ -196,11 +197,14 @@
   });
 
   var startCameraButton = document.getElementById('start-camera-button');
-  if (startCameraButton) startCameraButton.addEventListener('click', function() {
+  if (startCameraButton) startCameraButton.addEventListener('click', async function() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       document.getElementById('photo-capture-status').textContent = 'Camera access is not available in this browser. Use Upload photo instead.';
       return;
     }
+    try {
+      await fetch('/api/release_webcam', { method: 'POST' }).catch(function() {});
+    } catch(e) {}
     navigator.mediaDevices.getUserMedia({video: {facingMode: 'user'}, audio: false})
       .then(function(stream) {
         visitorCameraStream = stream;
@@ -337,22 +341,39 @@
           var fs = v.first_seen ? v.first_seen.replace('T', ' ').substring(0, 16) : '—';
           var ls = v.last_seen ? v.last_seen.replace('T', ' ').substring(0, 16) : '—';
 
-          html += '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
+          var countdownHtml = '<span class="text-slate-400 font-mono text-[11px]">—</span>';
+          if (v.is_present && v.expected_duration_minutes) {
+            var rem = v.remaining_minutes != null ? v.remaining_minutes : (v.expected_duration_minutes - (v.elapsed_minutes || 0));
+            if (rem <= 0 || v.is_overstay) {
+              countdownHtml = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse flex items-center gap-1 w-fit">' +
+                '🚨 Overstay +' + Math.abs(Math.round(rem)) + 'm' +
+              '</span>';
+            } else {
+              countdownHtml = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 w-fit font-mono">' +
+                '⏱️ ' + Math.round(rem) + 'm left (' + v.expected_duration_minutes + 'm)' +
+              '</span>';
+            }
+          }
+
+          html += '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors' + (v.is_overstay ? ' bg-rose-950/20 border-l-4 border-l-rose-500' : '') + '">' +
             '<td class="p-3.5 font-mono font-bold text-slate-900 dark:text-white">' + escapeHtml(v.visitor_code) + '</td>' +
             '<td class="p-3.5 font-semibold text-slate-800 dark:text-slate-200">' + escapeHtml(v.full_name || '—') + '</td>' +
             '<td class="p-3.5 font-mono text-[11px] text-slate-600 dark:text-slate-300">' + escapeHtml(v.phone_number || v.phone_last4 || '—') + '</td>' +
             '<td class="p-3.5"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ' + badgeCls + '">' + escapeHtml(v.category) + '</span></td>' +
             '<td class="p-3.5 font-medium text-slate-700 dark:text-slate-300">' + escapeHtml(v.label || '—') + '</td>' +
             '<td class="p-3.5"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ' + (v.is_present ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500') + '">' + (v.is_present ? 'Present' : 'Exited') + '</span></td>' +
+            '<td class="p-3.5">' + countdownHtml + '</td>' +
             '<td class="p-3.5 font-bold text-slate-800 dark:text-slate-200">' + (v.total_visits || 1) + '</td>' +
             '<td class="p-3.5 font-mono text-[11px] text-slate-500">' + fs + '</td>' +
             '<td class="p-3.5 font-mono text-[11px] text-slate-500">' + ls + '</td>' +
             '<td class="p-3.5 text-right space-x-2">' +
               (v.is_present ? '<button onclick="confirmVisitorExit(' + v.id + ', \'' + escapeHtml(v.visitor_code) + '\')" class="text-amber-600 hover:text-amber-700 font-bold cursor-pointer">Confirm exit</button>' : '') +
               '<button onclick="openEditVisitorModal(' + v.id + ', \'' + escapeHtml(v.visitor_code) + '\', \'' + escapeHtml(v.category) + '\', \'' + escapeHtml(v.label || '') + '\', \'' + escapeHtml(v.notes || '') + '\')" class="text-brand-600 hover:text-brand-700 font-bold cursor-pointer">Edit</button>' +
-              '<button onclick="purgeVisitor(' + v.id + ', \'' + escapeHtml(v.visitor_code) + '\')" class="text-red-500 hover:text-red-700 font-semibold cursor-pointer" title="DPDP Right-to-be-Forgotten">Purge</button>' +
+              '<button onclick="deleteVisitor(' + v.id + ', \'' + escapeHtml(v.visitor_code) + '\')" class="text-rose-600 hover:text-rose-800 font-bold cursor-pointer" title="Delete record">Delete</button>' +
+              '<button onclick="purgeVisitor(' + v.id + ', \'' + escapeHtml(v.visitor_code) + '\')" class="text-slate-400 hover:text-slate-600 font-semibold cursor-pointer" title="DPDP Right-to-be-Forgotten">Purge</button>' +
             '</td>' +
           '</tr>';
+
         });
 
         tbody.innerHTML = html;
@@ -387,12 +408,14 @@
       notes: document.getElementById('edit-visitor-notes').value
     };
 
+    var headers = Object.assign(
+      { 'Content-Type': 'application/json', 'X-Requested-With': 'GuardApp' },
+      localStorage.getItem('auth_token') ? {'Authorization': 'Bearer ' + localStorage.getItem('auth_token')} : {}
+    );
+
     fetch('/api/v2/visitors/' + id, {
       method: 'PUT',
-      headers: Object.assign(
-        { 'Content-Type': 'application/json' },
-        localStorage.getItem('auth_token') ? {'Authorization': 'Bearer ' + localStorage.getItem('auth_token')} : {}
-      ),
+      headers: headers,
       body: JSON.stringify(payload)
     })
     .then(function() {
@@ -401,11 +424,36 @@
     });
   };
 
+  window.deleteVisitor = function(id, code) {
+    if (!confirm('Permanently delete visitor record ' + code + '?')) return;
+    var headers = { 'X-Requested-With': 'GuardApp' };
+    if (localStorage.getItem('auth_token')) {
+      headers['Authorization'] = 'Bearer ' + localStorage.getItem('auth_token');
+    }
+    fetch('/api/v2/visitors/' + id, {
+      method: 'DELETE',
+      headers: headers
+    })
+      .then(function(r) {
+        if (!r.ok) {
+          return r.json().then(function(d) { alert(d.error || 'Failed to delete'); });
+        }
+        loadVisitorsData();
+      })
+      .catch(function(err) {
+        alert('Network error: ' + err.message);
+      });
+  };
+
   window.purgeVisitor = function(id, code) {
     if (!confirm('DPDP Act 2023 Compliance: Permanently purge all personal data and Re-ID embeddings for ' + code + '?')) return;
+    var headers = { 'X-Requested-With': 'GuardApp' };
+    if (localStorage.getItem('auth_token')) {
+      headers['Authorization'] = 'Bearer ' + localStorage.getItem('auth_token');
+    }
     fetch('/api/v2/visitors/' + id + '/purge', {
       method: 'DELETE',
-      headers: localStorage.getItem('auth_token') ? {'Authorization': 'Bearer ' + localStorage.getItem('auth_token')} : {}
+      headers: headers
     })
       .then(function() { loadVisitorsData(); });
   };

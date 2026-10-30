@@ -168,7 +168,16 @@ class LiveMonitorState:
         self.camera_mode = "youtube"
 
         if self.cameras:
-            c = self.cameras[0]
+            # Pick first non-webcam camera on boot so the hardware webcam is never claimed on startup
+            selected_cam = None
+            for cam_item in self.cameras:
+                c_src = str(cam_item.get("source", ""))
+                c_type = str(cam_item.get("type", "")).upper()
+                if not (c_src.isdigit() or c_src in ("0", "1") or c_type in ("WEBCAM", "USB")):
+                    selected_cam = cam_item
+                    break
+
+            c = selected_cam or self.cameras[0]
             self.active_camera_id = c.get("id", 1)
             self.active_source = normalize_network_source(
                 c.get("source", self.active_source)
@@ -178,8 +187,11 @@ class LiveMonitorState:
             src = str(self.active_source)
             if is_youtube_url(src):
                 self.camera_mode = "youtube"
-            elif c.get("type") == "USB" or src.isdigit() or src == "0":
-                self.camera_mode = "webcam"
+            elif c.get("type") in ("USB", "WEBCAM") or src.isdigit() or src == "0":
+                # Do NOT auto-claim webcam on startup! Default to demo standby so browser can use it
+                self.camera_mode = "demo"
+                self.camera_title = f"{c.get('name', 'Webcam')} (Standby)"
+                self.status_message = "Webcam in standby — select camera to activate"
             else:
                 self.camera_mode = "custom"
 
@@ -269,6 +281,22 @@ class LiveMonitorState:
 
         with self.lock:
             self.cameras = cams
+
+    def release_webcam(self):
+        with self.lock:
+            if self.cap is not None and (self.camera_mode == "webcam" or str(self.active_source) in ("0", "1")):
+                try:
+                    self.cap.release()
+                except Exception:
+                    pass
+                self.cap = None
+                self.camera_mode = "demo"
+                self.camera_title = "Demo Simulation Feed"
+                self.status_message = "Webcam yielded to browser"
+                self.is_connected = True
+                print("📷 Live hardware webcam released from backend.")
+                return True
+        return False
 
     def open_camera(self):
         # Prevent concurrent open attempts
@@ -538,6 +566,12 @@ def visitor_camera_worker():
                     source = str(cam.get("source") or "").strip()
                     if not source:
                         continue
+                    cam_type = str(cam.get("type") or "").upper()
+                    # Physical local USB/laptop webcams MUST NOT be opened in headless background threads!
+                    # Hardware cameras are exclusive resources on Windows. Opening them in the background
+                    # turns on the physical camera LED immediately and locks out the browser Kiosk.
+                    if source.isdigit() or source in ("0", "1") or cam_type in ("WEBCAM", "USB"):
+                        continue
                     cap = _VISITOR_CAPS.get(cam_id)
                     if cap is None or not cap.isOpened():
                         resolved_source = source
@@ -625,69 +659,84 @@ def visitor_camera_worker():
                 finally:
                     session.close()
 
-            # Check for overdue/overstayed visitors (entered and exceeded expected duration)
-            try:
-                ov_session = get_session_factory()()
-                try:
-                    from database.models import VisitorEntry, Visitor, Alert
-                    from services.visitor_service import is_visitor_present
-                    now_dt = datetime.datetime.now(datetime.timezone.utc)
-                    # Get recent entries from last 24h
-                    since = now_dt - datetime.timedelta(hours=24)
-                    recent_entries = ov_session.query(VisitorEntry).filter(
-                        VisitorEntry.event_type == "ENTRY",
-                        VisitorEntry.timestamp >= since
-                    ).all()
-
-                    for entry in recent_entries:
-                        if not entry.visitor_id:
-                            continue
-                        if not is_visitor_present(ov_session, entry.visitor_id):
-                            continue
-                        allowed_mins = entry.expected_duration_minutes or 60
-                        elapsed_mins = (now_dt - entry.timestamp.replace(tzinfo=datetime.timezone.utc if entry.timestamp.tzinfo is None else entry.timestamp.tzinfo)).total_seconds() / 60.0
-                        if elapsed_mins > allowed_mins:
-                            overstay_key = f"OVERSTAY_{entry.visitor_id}_{int(entry.timestamp.timestamp())}"
-                            if now - _VISITOR_LAST_ALERTS.get(overstay_key, 0) > 300:  # Remind every 5 mins
-                                _VISITOR_LAST_ALERTS[overstay_key] = now
-                                visitor_obj = ov_session.query(Visitor).filter(Visitor.id == entry.visitor_id).first()
-                                v_name = visitor_obj.full_name if visitor_obj else f"Visitor #{entry.visitor_id}"
-                                v_phone = visitor_obj.phone_number if visitor_obj else ""
-                                alert_msg = f"⚠️ OVERSTAY ALERT: {v_name} exceeded expected {allowed_mins} mins (Stayed {int(elapsed_mins)} mins). Phone: {v_phone}"
-                                
-                                # 1. Create DB Alert
-                                alert_rec = Alert(
-                                    alert_type="LOITERING",
-                                    severity="HIGH",
-                                    message=alert_msg,
-                                    status="NEW",
-                                )
-                                ov_session.add(alert_rec)
-                                ov_session.commit()
-
-                                # 2. Push to guard app queue
-                                _add_visitor_alert({
-                                    "alert_type": "OVERSTAY",
-                                    "visitor_id": entry.visitor_id,
-                                    "visitor_name": v_name,
-                                    "phone": v_phone,
-                                    "company": visitor_obj.company if visitor_obj else None,
-                                    "allowed_minutes": allowed_mins,
-                                    "elapsed_minutes": int(elapsed_mins),
-                                    "message": alert_msg,
-                                    "timestamp": now_dt.isoformat(),
-                                    "source": "OVERSTAY_MONITOR",
-                                })
-                                print(f"🚨 {alert_msg}")
-                finally:
-                    ov_session.close()
-            except Exception as overstay_err:
-                pass
-
             time.sleep(2.0)
         except Exception as error:
             print(f"Visitor camera worker error: {error}")
             time.sleep(1.0)
+
+
+def overstay_monitor_worker():
+    """Independent background worker running 24/7 checking for overstayed visitors.
+    Compares visitor's stay against their committed expected_duration_minutes.
+    When a visitor exceeds their time, creates a HIGH severity Alert in the database
+    and dispatches a real-time notification to the Security Guard Visitor app.
+    """
+    print("🛡️ Overstay Monitor background worker active.")
+    while True:
+        try:
+            now_dt = datetime.datetime.now(datetime.timezone.utc)
+            now_ts = time.time()
+            ov_session = get_session_factory()()
+            try:
+                from database.models import VisitorEntry, Visitor, Alert
+                from services.visitor_service import is_visitor_present
+
+                # Scan active entries from the last 24 hours
+                since = now_dt - datetime.timedelta(hours=24)
+                recent_entries = ov_session.query(VisitorEntry).filter(
+                    VisitorEntry.event_type == "ENTRY",
+                    VisitorEntry.timestamp >= since
+                ).all()
+
+                for entry in recent_entries:
+                    if not entry.visitor_id:
+                        continue
+                    if not is_visitor_present(ov_session, entry.visitor_id):
+                        continue
+                    allowed_mins = entry.expected_duration_minutes or 60
+                    entry_tz = entry.timestamp.replace(tzinfo=datetime.timezone.utc if entry.timestamp.tzinfo is None else entry.timestamp.tzinfo)
+                    elapsed_mins = (now_dt - entry_tz).total_seconds() / 60.0
+
+                    if elapsed_mins > allowed_mins:
+                        overstay_key = f"OVERSTAY_{entry.visitor_id}_{int(entry.timestamp.timestamp())}"
+                        if now_ts - _VISITOR_LAST_ALERTS.get(overstay_key, 0) > 300:  # Remind every 5 mins
+                            _VISITOR_LAST_ALERTS[overstay_key] = now_ts
+                            visitor_obj = ov_session.query(Visitor).filter(Visitor.id == entry.visitor_id).first()
+                            v_name = visitor_obj.full_name if visitor_obj else f"Visitor #{entry.visitor_id}"
+                            v_phone = visitor_obj.phone_number if visitor_obj else ""
+                            alert_msg = f"⚠️ OVERSTAY ALERT: {v_name} exceeded expected {allowed_mins} mins (Stayed {int(elapsed_mins)} mins). Phone: {v_phone}"
+
+                            # 1. Persist DB Alert for Security Center
+                            alert_rec = Alert(
+                                alert_type="LOITERING",
+                                severity="HIGH",
+                                message=alert_msg,
+                                status="NEW",
+                            )
+                            ov_session.add(alert_rec)
+                            ov_session.commit()
+
+                            # 2. Push to Guard App SSE/Polling queue
+                            _add_visitor_alert({
+                                "alert_type": "OVERSTAY",
+                                "visitor_id": entry.visitor_id,
+                                "visitor_name": v_name,
+                                "phone": v_phone,
+                                "company": visitor_obj.company if visitor_obj else None,
+                                "allowed_minutes": allowed_mins,
+                                "elapsed_minutes": int(elapsed_mins),
+                                "message": alert_msg,
+                                "timestamp": now_dt.isoformat(),
+                                "source": "OVERSTAY_MONITOR",
+                            })
+                            print(f"🚨 {alert_msg}")
+            finally:
+                ov_session.close()
+        except Exception as ov_err:
+            pass
+
+        time.sleep(8.0)
+
 
 
 def camera_worker_loop():
@@ -891,6 +940,8 @@ capture_thread = threading.Thread(target=camera_worker_loop, daemon=True)
 capture_thread.start()
 visitor_thread = threading.Thread(target=visitor_camera_worker, daemon=True)
 visitor_thread.start()
+overstay_thread = threading.Thread(target=overstay_monitor_worker, daemon=True)
+overstay_thread.start()
 anpr_thread = threading.Thread(target=anpr_worker_loop, daemon=True)
 anpr_thread.start()
 
@@ -926,11 +977,42 @@ def index():
     return render_template('index.html')
 
 
+def release_hardware_webcam():
+    """Immediately releases any OpenCV VideoCapture instance holding a local webcam (device 0, etc.)
+    so that browser pages (Kiosk, Registration) can access the hardware webcam without DirectShow conflict."""
+    global _VISITOR_CAPS
+    released = state.release_webcam()
+    for cid, ccap in list(_VISITOR_CAPS.items()):
+        try:
+            ccap.release()
+        except Exception:
+            pass
+        _VISITOR_CAPS.pop(cid, None)
+        released = True
+    return released
+
+
 @app.route('/kiosk')
 @app.route('/gate-agent')
+@app.route('/entry')
 def kiosk():
-    """Tablet Kiosk AI Voice Check-in interface for gate visitors."""
-    return render_template('kiosk.html')
+    """Tablet Kiosk AI Voice Check-in interface for gate visitors (Entry Gate)."""
+    release_hardware_webcam()
+    return render_template('kiosk.html', gate_mode='entry')
+
+
+@app.route('/exit')
+def kiosk_exit():
+    """Tablet Kiosk AI Voice & Face Checkout interface for visitors departing (Exit Gate)."""
+    release_hardware_webcam()
+    return render_template('kiosk.html', gate_mode='exit')
+
+
+@app.route('/api/release_webcam', methods=['GET', 'POST'])
+def api_release_webcam():
+    """Explicitly release any OpenCV hardware webcam lock for browser getUserMedia()."""
+    released = release_hardware_webcam()
+    return jsonify({"success": True, "released": released})
 
 
 @app.route('/video_feed')

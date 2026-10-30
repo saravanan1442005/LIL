@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1920px;
+    height: 1080px;
+    background: #FFFFFF;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 30px 40px;
+    overflow: hidden;
+  }
+  
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #E2E8F0;
+    padding-bottom: 12px;
+  }
+  .title-group h1 {
+    font-size: 26px;
+    font-weight: 800;
+    color: #0F172A;
+    letter-spacing: -0.5px;
+  }
+  .title-group p {
+    font-size: 13.5px;
+    color: #64748B;
+    font-weight: 500;
+    margin-top: 3px;
+  }
+  .badge-group {
+    display: flex;
+    gap: 12px;
+  }
+  .badge {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    color: #1E40AF;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge.privacy {
+    background: #ECFDF5;
+    border-color: #A7F3D0;
+    color: #065F46;
+  }
+
+  /* Main Canvas Grid */
+  .canvas {
+    display: flex;
+    gap: 20px;
+    height: 870px;
+    align-items: stretch;
+  }
+
+  /* Column Boxes */
+  .col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .block {
+    background: #FFFFFF;
+    border-radius: 12px;
+    border: 1.5px solid #E2E8F0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .block-header {
+    padding: 10px 16px;
+    font-size: 13.5px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .block-body {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    flex: 1;
+    background: #FAFAFA;
+  }
+
+  .card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 9px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0F172A;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card-sub {
+    font-size: 11.5px;
+    color: #64748B;
+    line-height: 1.35;
+  }
+  .tag {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #F1F5F9;
+    color: #475569;
+  }
+
+  /* Connector Indicator Arrow between columns */
+  .connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    color: #94A3B8;
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  /* Specific Theming for the 5 Columns */
+  /* Col 1: Visitor Identification (Emerald) */
+  .theme-visitor .block-header { background: #ECFDF5; color: #065F46; border-bottom: 2px solid #10B981; }
+  .theme-visitor .card { border-left: 3.5px solid #10B981; }
+
+  /* Col 2: Activity Tracking & Vision (Blue) */
+  .theme-tracking .block-header { background: #EFF6FF; color: #1E40AF; border-bottom: 2px solid #3B82F6; }
+  .theme-tracking .card { border-left: 3.5px solid #3B82F6; }
+
+  /* Col 3: Re-ID & Vector Intelligence (Purple) */
+  .theme-reid .block-header { background: #FAF5FF; color: #6B21A8; border-bottom: 2px solid #A855F7; }
+  .theme-reid .card { border-left: 3.5px solid #A855F7; }
+
+  /* Col 4: Behavioral Violation Engine (Amber) */
+  .theme-violation .block-header { background: #FFFBEB; color: #92400E; border-bottom: 2px solid #F59E0B; }
+  .theme-violation .card { border-left: 3.5px solid #F59E0B; }
+
+  /* Col 5: Physical Interception & Actuation (Crimson) */
+  .theme-enforce .block-header { background: #FEF2F2; color: #991B1B; border-bottom: 2px solid #EF4444; }
+  .theme-enforce .card { border-left: 3.5px solid #EF4444; }
+
+  /* Bottom Privacy Bar across all */
+  .footer-bar {
+    background: #F8FAFC;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12.5px;
+    color: #334155;
+  }
+  .footer-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10B981;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Top Title Header -->
+  <div class="header">
+    <div class="title-group">
+      <h1>ECOLIFEBUDDY: PRODUCT ARCHITECTURE &amp; SYSTEM BLOCK DIAGRAM</h1>
+      <p>Autonomous AI-Based CCTV Intelligence System for Visitor Identification, Activity Tracking, and Safer, Cleaner Communities</p>
+    </div>
+    <div class="badge-group">
+      <span class="badge">Multi-Camera Edge AI</span>
+      <span class="badge">Closed-Loop Deterrence</span>
+      <span class="badge privacy">DPDP Act 2023 Compliant</span>
+    </div>
+  </div>
+
+  <!-- 5 Architecture Pillars (Left-to-Right Flow) -->
+  <div class="canvas">
+    
+    <!-- PILLAR 1: VISITOR IDENTIFICATION (INGRESS) -->
+    <div class="col theme-visitor">
+      <div class="block" style="flex: 1;">
+        <div class="block-header">
+          <span>1. Ingress &amp; Visitor Identification</span>
+        </div>
+        <div class="block-body">
+          <div class="card">
+            <div class="card-title">
+              <span>Bilingual Voice AI Kiosk</span>
+              <span class="tag">Gate Entrance</span>
+            </div>
+            <div class="card-sub">Google ADK agent + Gemini Live API; touchless conversational speech check-in in Tamil &amp; English.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Stay Duration Validation</span>
+              <span class="tag">Rule Clamp</span>
+            </div>
+            <div class="card-sub">Purpose-driven stay bounds (Delivery: 15–30m, Maintenance: min 60m, Guest: 30–240m); overstay detection.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Consented Face Registration</span>
+              <span class="tag">ArcFace 512-D</span>
+            </div>
+            <div class="card-sub">InsightFace (buffalo_sc) extracts 512-D angular margin facial embeddings under explicit user consent.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Adaptive ANPR Vehicle Read</span>
+              <span class="tag">OCR Consensus</span>
+            </div>
+            <div class="card-sub">Plate localization + Bilateral/CLAHE enhancement + Indian plate regex + Multi-frame consensus voting.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Presence State Lifecycle</span>
+              <span class="tag">Guard Confirmed</span>
+            </div>
+            <div class="card-sub">Separates profile from presence; enforces confirmed entry/exit records and blocks duplicate check-ins.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">➔</div>
+
+    <!-- PILLAR 2: ACTIVITY TRACKING & VISION -->
+    <div class="col theme-tracking">
+      <div class="block" style="flex: 1;">
+        <div class="block-header">
+          <span>2. Vision &amp; Activity Tracking</span>
+        </div>
+        <div class="block-body">
+          <div class="card">
+            <div class="card-title">
+              <span>Multi-Stream Ingestion</span>
+              <span class="tag">RTSP / USB</span>
+            </div>
+            <div class="card-sub">Thread-safe camera capture (buffer size = 1, sub-100ms lag) with purpose separation (VISITOR vs LITTER).</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Neural Vision Backbone</span>
+              <span class="tag">YOLO (640px)</span>
+            </div>
+            <div class="card-sub">Ultralytics YOLO (CIoU loss) detects pedestrians (COCO 0) and carried objects (bags, bottles, packages).</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Multi-Object Tracking</span>
+              <span class="tag">ByteTrack</span>
+            </div>
+            <div class="card-sub">Two-stage Hungarian matching + 8-state Kalman filters maintain persistent TrackIDs through dense crowds.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Virtual Tripwires &amp; Polygons</span>
+              <span class="tag">Geometry</span>
+            </div>
+            <div class="card-sub">Ray-casting point-in-polygon containment and CCW cross-product line crossings for entry/exit gates.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Time-Stamped Event Engine</span>
+              <span class="tag">Events</span>
+            </div>
+            <div class="card-sub">Continuous emission of ENTRY, EXIT, ZONE_ENTER, ZONE_EXIT, OBJECT_CARRIED, and LOITERING.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">➔</div>
+
+    <!-- PILLAR 3: RE-ID & VECTOR INTELLIGENCE -->
+    <div class="col theme-reid">
+      <div class="block" style="flex: 1;">
+        <div class="block-header">
+          <span>3. Cross-Camera Re-ID &amp; Storage</span>
+        </div>
+        <div class="block-body">
+          <div class="card">
+            <div class="card-title">
+              <span>OSNet Appearance Re-ID</span>
+              <span class="tag">512-D L2</span>
+            </div>
+            <div class="card-sub">Extracts omni-scale appearance features across non-overlapping corridor cameras and multi-day visits.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Color-Texture Pyramid</span>
+              <span class="tag">Fallback</span>
+            </div>
+            <div class="card-sub">3-tier vertical spatial pyramid (Head 20%, Torso 45%, Legs 35%) with HSV + CIELAB histograms.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>pgvector HNSW Vector Store</span>
+              <span class="tag">Postgres / SQLite</span>
+            </div>
+            <div class="card-sub">Sub-100ms cosine similarity search indexed via HNSW graphs; SQLite Vector512 JSON fallback.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Forensic Timeline Generator</span>
+              <span class="tag">Forensics</span>
+            </div>
+            <div class="card-sub">Natural-language search and instant one-click reconstruction of full visitor pathways across campus.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Anomaly Detection</span>
+              <span class="tag">Isolation Forest</span>
+            </div>
+            <div class="card-sub">Flags odd-hour visits, excessive dwell times, and unauthorized restricted zone access.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">➔</div>
+
+    <!-- PILLAR 4: BEHAVIORAL VIOLATION ENGINE -->
+    <div class="col theme-violation">
+      <div class="block" style="flex: 1;">
+        <div class="block-header">
+          <span>4. Civic Violation Engine</span>
+        </div>
+        <div class="block-body">
+          <div class="card">
+            <div class="card-title">
+              <span>4-State Finite State Machine</span>
+              <span class="tag">FSM</span>
+            </div>
+            <div class="card-sub">STATIC ➔ HELD ➔ SEPARATING ➔ TRACKING ➔ VIOLATION; eliminates false alarms on background items.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Perspective Distance Normalizer</span>
+              <span class="tag">d_pw Metric</span>
+            </div>
+            <div class="card-sub">Scales Euclidean pixel separation by detected human height: eliminates wide-angle camera distortion.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Carriage Verification</span>
+              <span class="tag">Movement Check</span>
+            </div>
+            <div class="card-sub">Requires total displacement &gt; 22px to verify item was held; prevents flagging resting bags or tables.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Dustbin Polygon Exclusion</span>
+              <span class="tag">ROI Filter</span>
+            </div>
+            <div class="card-sub">Computes spatial IoU with verified dustbin polygons; suppresses alerts during proper waste disposal.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>2D Gaussian GIS Heatmaps</span>
+              <span class="tag">KDE / DBSCAN</span>
+            </div>
+            <div class="card-sub">Clusters violation coordinates over 72h to pinpoint litter hotspots for dustbin redeployment.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector">➔</div>
+
+    <!-- PILLAR 5: PHYSICAL ENFORCEMENT & INTERCEPTION -->
+    <div class="col theme-enforce">
+      <div class="block" style="flex: 1;">
+        <div class="block-header">
+          <span>5. Egress Interception &amp; Action</span>
+        </div>
+        <div class="block-body">
+          <div class="card">
+            <div class="card-title">
+              <span>Sub-100ms Exit Face Match</span>
+              <span class="tag">Cosine ≥ 0.68</span>
+            </div>
+            <div class="card-sub">Egress camera scans departing pedestrians and queries active violation watchlist in under 100ms.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Turnstile Hardware Lock</span>
+              <span class="tag">Relay Interlock</span>
+            </div>
+            <div class="card-sub">Commands SPDT dry-contact relays to mechanically lock motorized tripod barriers on positive match.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Multi-Modal Audio-Visual Alarm</span>
+              <span class="tag">Sirens &amp; Sign</span>
+            </div>
+            <div class="card-sub">Triggers flashing red emergency strobe sirens and overhead LED sign: "WARNING: VIOLATION DETECTED".</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Guard Tablet Push Dispatch</span>
+              <span class="tag">WebSocket</span>
+            </div>
+            <div class="card-sub">Sends real-time popup with photo evidence, timestamp, and location to guard tablets for interception.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span>Human-in-the-Loop Review</span>
+              <span class="tag">Audit Link</span>
+            </div>
+            <div class="card-sub">Guards verify visual evidence before final penalty attribution; prevents wrongful accusations.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Privacy & Regulatory Foundation Bar -->
+  <div class="footer-bar">
+    <div class="footer-item"><span class="dot"></span> <b>India DPDP Act 2023 Compliant</b>: Automated edge facial blurring for innocent bystanders</div>
+    <div class="footer-item"><span class="dot"></span> <b>Privacy-Aware Retention</b>: Non-violator profiles auto-purged on exit; violation audits preserved</div>
+    <div class="footer-item"><span class="dot"></span> <b>Immutable Audit Trail</b>: Tamper-proof logging for all unmaskings, queries, and attributions</div>
+    <div class="footer-item"><span class="dot"></span> <b>Edge Inference</b>: 32.4 FPS multi-stream throughput on standard commodity cameras</div>
+  </div>
+
+</body>
+</html>

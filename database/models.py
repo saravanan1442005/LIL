@@ -314,6 +314,7 @@ class VisitorEntry(Base):
     confirmed = Column(Boolean, default=False, nullable=False)
     snapshot_path = Column(String(500), nullable=True)
     expected_duration_minutes = Column(Integer, nullable=True, default=60)
+    purpose = Column(String(100), nullable=True)  # purpose of this specific visit
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
 
     visitor = relationship("Visitor")
@@ -330,6 +331,7 @@ class VisitorEntry(Base):
             "confirmed": self.confirmed,
             "snapshot_path": self.snapshot_path,
             "expected_duration_minutes": self.expected_duration_minutes,
+            "purpose": self.purpose,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
         }
 

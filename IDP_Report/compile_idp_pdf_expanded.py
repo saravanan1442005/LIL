@@ -85,7 +85,7 @@ def build_pdf():
     story.append(Paragraph("SRI SAIRAM ENGINEERING COLLEGE", ParagraphStyle('IH', fontName='Helvetica-Bold', fontSize=15, alignment=1, textColor=colors.HexColor('#1E3A8A'))))
     story.append(Paragraph("(An Autonomous Institution; Affiliated to Anna University, Chennai - 600 025)", ParagraphStyle('IS', fontName='Helvetica', fontSize=9, alignment=1, textColor=colors.HexColor('#475569'))))
     story.append(Spacer(1, 25))
-    story.append(Paragraph("Eco Life Buddy: An AI-Based CCTV Monitoring System for Detecting Public Cleanliness and Waste Disposal Violations", title_style))
+    story.append(Paragraph("Eco Life Buddy: An AI-Based CCTV Intelligence System for Visitor Identification, Activity Tracking, and Safer, Cleaner Communities", title_style))
     story.append(Spacer(1, 15))
     story.append(Paragraph("INNOVATIVE DESIGN PROJECT-I", ParagraphStyle('IDPS', fontName='Helvetica-Bold', fontSize=13, alignment=1, textColor=colors.HexColor('#047857'))))
     story.append(Spacer(1, 28))
@@ -114,7 +114,7 @@ def build_pdf():
     story.append(Spacer(1, 25))
     story.append(Paragraph("BONAFIDE CERTIFICATE", ParagraphStyle('CT', fontName='Helvetica-Bold', fontSize=16, alignment=1)))
     story.append(Spacer(1, 20))
-    story.append(Paragraph("Certified that this INNOVATIVE DESIGN PROJECT-I report titled <b>“Eco Life Buddy: An AI-Based CCTV Monitoring System for Detecting Public Cleanliness and Waste Disposal Violations”</b> is the Bonafide work of <b>BALAJI R (2303412555921003)</b>, <b>SARAVANAN S (2303412555922019)</b>, and <b>VIGNESHAYYANAR M (2303412555922051)</b> who carried out the <b>20CJPL701 - INNOVATIVE DESIGN PROJECT-I</b> under my supervision.", ParagraphStyle('CB', fontName='Helvetica', fontSize=10, leading=16, alignment=4)))
+    story.append(Paragraph("Certified that this INNOVATIVE DESIGN PROJECT-I report titled <b>“Eco Life Buddy: An AI-Based CCTV Intelligence System for Visitor Identification, Activity Tracking, and Safer, Cleaner Communities”</b> is the Bonafide work of <b>BALAJI R (2303412555921003)</b>, <b>SARAVANAN S (2303412555922019)</b>, and <b>VIGNESHAYYANAR M (2303412555922051)</b> who carried out the <b>20CJPL701 - INNOVATIVE DESIGN PROJECT-I</b> under my supervision.", ParagraphStyle('CB', fontName='Helvetica', fontSize=10, leading=16, alignment=4)))
     story.append(Spacer(1, 60))
     t_sigs = Table([
         [Paragraph("<b>SIGNATURE</b>", cell_bold), Paragraph("<b>SIGNATURE</b>", cell_bold), Paragraph("<b>SIGNATURE</b>", cell_bold)],

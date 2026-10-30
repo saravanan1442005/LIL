@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #FFFFFF;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    padding: 24px;
+    display: inline-block;
+  }
+  table {
+    border-collapse: separate;
+    border-spacing: 0 10px;
+    width: 1320px;
+  }
+  th {
+    background: #1E3A8A;
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 16px 22px;
+    text-align: left;
+    letter-spacing: 0.3px;
+  }
+  th:first-child { border-radius: 8px 0 0 8px; }
+  th:last-child { border-radius: 0 8px 8px 0; }
+  
+  tr.data-row td {
+    background: #F8FAFC;
+    padding: 16px 20px;
+    vertical-align: middle;
+    font-size: 14px;
+    line-height: 1.45;
+    border-top: 1px solid #E2E8F0;
+    border-bottom: 1px solid #E2E8F0;
+  }
+  tr.data-row:nth-child(even) td {
+    background: #FFFFFF;
+  }
+  tr.data-row td:first-child {
+    border-left: 1px solid #E2E8F0;
+    border-radius: 8px 0 0 8px;
+    font-weight: 700;
+    color: #0F172A;
+    width: 21%;
+  }
+  tr.data-row td:nth-child(2) {
+    color: #64748B;
+    width: 25%;
+  }
+  tr.data-row td:nth-child(3) {
+    width: 26%;
+  }
+  tr.data-row td:last-child {
+    border-right: 1px solid #E2E8F0;
+    border-radius: 0 8px 8px 0;
+    color: #1E3A8A;
+    font-weight: 600;
+    width: 28%;
+  }
+  
+  .our-badge {
+    background: #ECFDF5;
+    border: 1.5px solid #10B981;
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: #065F46;
+    font-weight: 700;
+    display: block;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+  <table id="comp-table">
+    <thead>
+      <tr>
+        <th style="width: 21%;">Feature / Capability</th>
+        <th style="width: 25%;">Existing Systems</th>
+        <th style="width: 26%;">Our EcoLifyBuddy System</th>
+        <th style="width: 28%;">Why Ours is Best (Advantage)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="data-row">
+        <td>1. Visitor Check-In</td>
+        <td>Slow manual paper registers or cumbersome touchscreen forms</td>
+        <td><div class="our-badge">Bilingual Voice AI Kiosk<br><span style="font-size:12px;font-weight:500;color:#047857;">(Tamil &amp; English speech)</span></div></td>
+        <td>Touchless &amp; natural spoken check-in; verifies stay duration and blocks duplicate entry.</td>
+      </tr>
+      <tr class="data-row">
+        <td>2. Object &amp; Person Detection</td>
+        <td>Slow processing; misses small objects in dense or crowded areas</td>
+        <td><div class="our-badge">Real-Time High-Speed AI Vision<br><span style="font-size:12px;font-weight:500;color:#047857;">(YOLO Backbone)</span></div></td>
+        <td>Runs at 32+ FPS on live video; simultaneously detects people and carried items.</td>
+      </tr>
+      <tr class="data-row">
+        <td>3. Movement Tracking</td>
+        <td>Loses track of people behind obstacles; frequent identity switches</td>
+        <td><div class="our-badge">Smart Continuous Tracking<br><span style="font-size:12px;font-weight:500;color:#047857;">(ByteTrack &amp; Kalman Filter)</span></div></td>
+        <td>Maintains unbroken paths without mixing IDs, even when pedestrians cross in crowds.</td>
+      </tr>
+      <tr class="data-row">
+        <td>4. Visitor Recognition</td>
+        <td>Cannot recognize returning visitors across distant gates or days</td>
+        <td><div class="our-badge">Appearance Re-ID &amp;<br>Face Vector Matching</div></td>
+        <td>Sub-100ms vector lookup across campus; instantly recognizes recurring visitors and watchlists.</td>
+      </tr>
+      <tr class="data-row">
+        <td>5. Violation Detection (Littering)</td>
+        <td>Frequent false alarms on bags/chairs; relies on fatigued human guards</td>
+        <td><div class="our-badge">Smart Behavioral Rule Engine<br><span style="font-size:12px;font-weight:500;color:#047857;">(Perspective-Normalized)</span></div></td>
+        <td>Only triggers when an item is actually carried, dropped, and abandoned away from dustbins.</td>
+      </tr>
+      <tr class="data-row">
+        <td>6. Enforcing Deterrence</td>
+        <td>Delayed postal notices sent weeks later; completely ignored</td>
+        <td><div class="our-badge">Instant Exit Turnstile Lockout<br><span style="font-size:12px;font-weight:500;color:#047857;">&amp; Audio-Visual Warning</span></div></td>
+        <td>Physically intercepts violators at exit gates with locked barriers and sirens before escape.</td>
+      </tr>
+      <tr class="data-row">
+        <td>7. Citizen Privacy (DPDP Act)</td>
+        <td>Raw video recording saves everyone without consent (privacy violation)</td>
+        <td><div class="our-badge">Automatic Edge Face Blurring<br><span style="font-size:12px;font-weight:500;color:#047857;">&amp; Scheduled Auto-Purge</span></div></td>
+        <td>Fully DPDP Act 2023 compliant: automatically blurs innocent bystanders and purges departed logs.</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>

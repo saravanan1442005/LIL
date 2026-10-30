@@ -6,7 +6,7 @@ import uuid
 import datetime
 import logging
 from typing import Optional, Tuple, List, Dict, Any
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session  # type: ignore
 from database.models import Visitor, VisitorEmbedding, VisitorEntry, Event, Track, AuditLog
 from services.reid_service import get_reid_extractor
 from services.face_service import get_face_service
@@ -16,6 +16,18 @@ from services.audit_service import log_audit_event
 logger = logging.getLogger("ecolifybuddy.visitor")
 
 DEFAULT_SIMILARITY_THRESHOLD = 0.68
+
+import threading
+
+_GATE_LOCK = threading.Lock()
+
+
+class AlreadyPresentError(ValueError):
+    """Raised when an ENTRY is attempted for a visitor with an active visit."""
+
+
+class NotPresentError(ValueError):
+    """Raised when an EXIT is attempted for a visitor without an active visit."""
 
 
 
@@ -55,6 +67,7 @@ def record_gate_event(
     snapshot_path: Optional[str] = None,
     user_id: Optional[int] = None,
     expected_duration_minutes: Optional[int] = 60,
+    purpose: Optional[str] = None,
 ) -> VisitorEntry:
     """Persist a confirmed entry/exit event and update the visitor's presence."""
     event_type = event_type.upper()
@@ -81,29 +94,37 @@ def record_gate_event(
     if not visitor:
         raise LookupError("Active visitor not found.")
 
-    present = is_visitor_present(session, visitor_id)
-    if event_type == "ENTRY" and present:
-        raise ValueError("Visitor is already marked as present.")
-    if event_type == "EXIT" and not present:
-        raise ValueError("Visitor is not currently marked as present.")
+    with _GATE_LOCK:
+        # Re-check presence inside the lock against the database (source of truth)
+        session.expire_all()
+        present = is_visitor_present(session, visitor_id)
+        if event_type == "ENTRY" and present:
+            raise AlreadyPresentError("Visitor is already marked as present.")
+        if event_type == "EXIT" and not present:
+            raise NotPresentError("Visitor is not currently marked as present.")
 
-    entry = VisitorEntry(
-        visitor_id=visitor.id,
-        camera_id=camera_id,
-        event_type=event_type,
-        source=source,
-        confidence=confidence,
-        guard_user_id=user_id,
-        confirmed=True,
-        snapshot_path=snapshot_path,
-        expected_duration_minutes=expected_duration_minutes or 60,
-    )
-    visitor.last_seen = datetime.datetime.now(datetime.timezone.utc)
-    if event_type == "ENTRY":
-        visitor.total_visits = (visitor.total_visits or 0) + 1
-    session.add(entry)
-    session.commit()
-    return entry
+        entry = VisitorEntry(
+            visitor_id=visitor.id,
+            camera_id=camera_id,
+            event_type=event_type,
+            source=source,
+            confidence=confidence,
+            guard_user_id=user_id,
+            confirmed=True,
+            snapshot_path=snapshot_path,
+            expected_duration_minutes=expected_duration_minutes or 60,
+            purpose=(purpose or None),
+        )
+        visitor.last_seen = datetime.datetime.now(datetime.timezone.utc)
+        if event_type == "ENTRY":
+            visitor.total_visits = (visitor.total_visits or 0) + 1
+        session.add(entry)
+        try:
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        return entry
 
 
 def match_or_create_visitor(
@@ -353,5 +374,39 @@ def purge_visitor_data(session: Session, visitor_id: int, reason: str = "Data Pr
         target_id=str(visitor_id),
         reason=reason,
         details={"original_code": original_code}
+    )
+    return True
+
+
+def delete_visitor_completely(session: Session, visitor_id: int) -> bool:
+    """Permanently delete visitor profile and cleanly handle references."""
+    from database.models import VisitorEntry, PlateRead, Track, Event, FaceEnrollment
+
+    visitor = session.query(Visitor).filter(Visitor.id == visitor_id).first()
+    if not visitor:
+        return False
+
+    v_code = visitor.visitor_code
+
+    # Remove embeddings & face enrollments
+    session.query(VisitorEmbedding).filter(VisitorEmbedding.visitor_id == visitor_id).delete()
+    session.query(FaceEnrollment).filter(FaceEnrollment.visitor_id == visitor_id).delete()
+
+    # Unlink or clean entries, plate reads, tracks, events
+    session.query(VisitorEntry).filter(VisitorEntry.visitor_id == visitor_id).delete()
+    session.query(PlateRead).filter(PlateRead.visitor_id == visitor_id).update({"visitor_id": None})
+    session.query(Track).filter(Track.visitor_id == visitor_id).update({"visitor_id": None})
+    session.query(Event).filter(Event.visitor_id == visitor_id).update({"visitor_id": None})
+
+    session.delete(visitor)
+    session.commit()
+
+    log_audit_event(
+        session=session,
+        action="DELETE_VISITOR_PROFILE",
+        target_type="Visitor",
+        target_id=str(visitor_id),
+        reason="Manual permanent profile deletion",
+        details={"visitor_code": v_code}
     )
     return True

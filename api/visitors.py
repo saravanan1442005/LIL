@@ -24,7 +24,7 @@ visitors_bp = Blueprint("visitors", __name__, url_prefix="/api/v2/visitors")
 def list_visitors():
     session: Session = get_session_factory()()
     try:
-        query = session.query(Visitor).filter(Visitor.status != "MERGED")
+        query = session.query(Visitor).filter(Visitor.status.notin_(["MERGED", "REDACTED"]))
 
         category = request.args.get("category")
         q = request.args.get("q")
@@ -50,10 +50,40 @@ def list_visitors():
         total = query.count()
         visitors = query.order_by(Visitor.last_seen.desc()).offset(offset).limit(limit).all()
         visitor_list = []
+        now_dt = datetime.now(timezone.utc)
+        from database.models import VisitorEntry
+
         for v in visitors:
-            payload = v.to_dict() | {"is_present": is_visitor_present(session, v.id)}
+            present = is_visitor_present(session, v.id)
+            payload = v.to_dict() | {"is_present": present}
             payload["updated_at"] = v.updated_at.isoformat() if v.updated_at else None
             payload["last_seen_iso"] = v.last_seen.isoformat() if v.last_seen else None
+            
+            # If currently present, compute committed duration countdown & overstay status
+            latest_entry = None
+            if present:
+                latest_entry = session.query(VisitorEntry).filter(
+                    VisitorEntry.visitor_id == v.id,
+                    VisitorEntry.event_type == "ENTRY"
+                ).order_by(VisitorEntry.timestamp.desc()).first()
+
+            if latest_entry:
+                ent_tz = latest_entry.timestamp.replace(tzinfo=timezone.utc if latest_entry.timestamp.tzinfo is None else latest_entry.timestamp.tzinfo)
+                elapsed_mins = max(0, (now_dt - ent_tz).total_seconds() / 60.0)
+                allowed_mins = latest_entry.expected_duration_minutes or 60
+                remaining_mins = allowed_mins - elapsed_mins
+                payload["entry_time"] = ent_tz.isoformat()
+                payload["expected_duration_minutes"] = allowed_mins
+                payload["elapsed_minutes"] = round(elapsed_mins, 1)
+                payload["remaining_minutes"] = round(remaining_mins, 1)
+                payload["is_overstay"] = bool(remaining_mins < 0)
+            else:
+                payload["entry_time"] = None
+                payload["expected_duration_minutes"] = None
+                payload["elapsed_minutes"] = None
+                payload["remaining_minutes"] = None
+                payload["is_overstay"] = False
+
             visitor_list.append(payload)
 
         return jsonify({
@@ -159,7 +189,7 @@ def merge_visitors():
 
 
 @visitors_bp.route("/<int:visitor_id>/purge", methods=["DELETE"])
-@roles_required("Admin")
+@roles_required("Admin", "Security Officer")
 def purge_visitor(visitor_id: int):
     data = request.get_json(silent=True) or {}
     reason = data.get("reason", "Data Principal Right-to-be-Forgotten Request under DPDP Act 2023")
@@ -172,3 +202,20 @@ def purge_visitor(visitor_id: int):
         return jsonify({"message": f"All personal data and appearance embeddings for visitor #{visitor_id} permanently erased."})
     finally:
         session.close()
+
+
+@visitors_bp.route("/<int:visitor_id>", methods=["DELETE"])
+@roles_required("Admin", "Security Officer")
+def delete_visitor(visitor_id: int):
+    """Permanently delete visitor record from database."""
+    from services.visitor_service import delete_visitor_completely
+
+    session: Session = get_session_factory()()
+    try:
+        success = delete_visitor_completely(session, visitor_id)
+        if not success:
+            return jsonify({"error": "Visitor not found."}), 404
+        return jsonify({"message": f"Visitor #{visitor_id} permanently deleted."})
+    finally:
+        session.close()
+

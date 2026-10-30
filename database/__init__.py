@@ -184,5 +184,8 @@ def _ensure_visitor_entry_columns(conn):
         if "expected_duration_minutes" not in existing:
             conn.execute(text("ALTER TABLE visitor_entries ADD COLUMN expected_duration_minutes INTEGER DEFAULT 60"))
             conn.commit()
+        if "purpose" not in existing:
+            conn.execute(text("ALTER TABLE visitor_entries ADD COLUMN purpose VARCHAR(100)"))
+            conn.commit()
     except Exception as e:
         logger.warning("Could not verify visitor_entries columns: %s", e)

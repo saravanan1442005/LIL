@@ -25,10 +25,18 @@ from services.visitor_service import (
 )
 from services.anpr_service import ANPRService, aggregate_plate_reads
 from services.face_service import get_face_service
+from services.visitor_service import AlreadyPresentError, NotPresentError
 
 registration_bp = Blueprint("registration", __name__, url_prefix="/api/v2/registration")
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 _anpr_service = None
+
+DUPLICATE_ENTRY_TA = "நீங்கள் ஏற்கனவே உள்ளே நுழைந்துவிட்டீர்கள். வெளியேற விரும்பினால் எக்ஸிட் திரைக்குச் செல்லவும்."
+DUPLICATE_ENTRY_EN = "You have already entered. Please proceed to the exit gate to leave."
+EXIT_RECORDED_TA = "நன்றி இன்று வந்ததற்கு. உங்களது எக்ஸிட் ரெக்கார்ட் செய்யப்பட்டது."
+EXIT_RECORDED_EN = "Thank you for visiting today. Your exit has been recorded."
+NO_ACTIVE_ENTRY_TA = "செயலில் உள்ள என்ட்ரி இல்லை. தயவுசெய்து முதலில் என்ட்ரி கேட் செல்லவும்."
+NO_ACTIVE_ENTRY_EN = "No active entry found. Please visit the entry gate first."
 
 
 def _phone_hash(phone: str) -> str:
@@ -90,25 +98,51 @@ def camera_alerts():
 
 @registration_bp.route("/kiosk/voice-parse", methods=["POST"])
 def voice_parse():
-    """Parse visitor speech into structured details via Gemini or fast local NLP."""
+    """Adaptive conversational AI: parses speech, merges with existing data,
+    evaluates completeness, and returns the next conversational question or confirmation.
+    """
     data = request.get_json(silent=True) or {}
     transcript = str(data.get("transcript", "")).strip()
     language = str(data.get("language", "ta-IN")).strip()
+    existing_data = data.get("existing_data") or {}
 
-    from services.voice_agent_service import extract_visitor_details_from_speech
-    extracted = extract_visitor_details_from_speech(transcript, language=language)
-    return jsonify({"extracted": extracted})
+    from services.voice_agent_service import conduct_visitor_conversation, classify_confirmation_intent
+    result = conduct_visitor_conversation(transcript, existing_data=existing_data, language=language)
+    conf_intent = classify_confirmation_intent(transcript)
+    intent_str = "positive" if conf_intent is True else ("negative" if conf_intent is False else "unknown")
+    return jsonify({
+        "extracted": result.get("updated_data", {}),
+        "is_complete": result.get("is_complete", False),
+        "reply_tamil": result.get("reply_tamil", ""),
+        "reply_english": result.get("reply_english", ""),
+        "raw_transcript": transcript,
+        "framework": result.get("framework", "adk-compatible"),
+        "confirmation_intent": intent_str,
+    })
+
+
+@registration_bp.route("/kiosk/live-config", methods=["GET"])
+def kiosk_live_config():
+    """Return Gemini Multimodal Live API WebSocket session config and tools according to
+    https://ai.google.dev/gemini-api/docs/live-api.
+    """
+    from services.voice_agent_service import get_gemini_live_session_config
+    config = get_gemini_live_session_config()
+    return jsonify(config)
 
 
 @registration_bp.route("/kiosk/voice-audio", methods=["POST"])
+
 def voice_audio():
     """Receive recorded WAV audio from tablet microphone and transcribe via server-side Google STT."""
+    existing_data = {}
     language = request.form.get("language", "ta-IN")
     audio_file = request.files.get("audio")
 
     if not audio_file:
         data = request.get_json(silent=True) or {}
         language = data.get("language", "ta-IN")
+        existing_data = data.get("existing_data") or {}
         audio_b64 = data.get("audio_base64", "")
         if audio_b64:
             import base64
@@ -119,10 +153,25 @@ def voice_audio():
             return jsonify({"error": "No audio file or audio_base64 provided"}), 400
     else:
         raw_bytes = audio_file.read()
+        raw_existing = request.form.get("existing_data", "{}")
+        try:
+            import json
+            existing_data = json.loads(raw_existing)
+        except Exception:
+            existing_data = {}
 
-    from services.voice_agent_service import transcribe_and_extract_from_audio_bytes
+    from services.voice_agent_service import transcribe_and_extract_from_audio_bytes, conduct_visitor_conversation
     extracted = transcribe_and_extract_from_audio_bytes(raw_bytes, language=language)
-    return jsonify({"extracted": extracted, "transcript": extracted.get("raw_transcript", "")})
+    transcript = extracted.get("raw_transcript", "")
+
+    conversation = conduct_visitor_conversation(transcript, existing_data=existing_data, language=language)
+    return jsonify({
+        "transcript": transcript,
+        "extracted": conversation.get("updated_data", extracted),
+        "is_complete": conversation.get("is_complete", False),
+        "reply_tamil": conversation.get("reply_tamil", ""),
+        "reply_english": conversation.get("reply_english", "")
+    })
 
 
 @registration_bp.route("/kiosk/tts", methods=["GET"])
@@ -150,7 +199,32 @@ def voice_checkin():
     phone = _normalize_phone(str(data.get("phone", "")))
     company = data.get("company")
     category = data.get("category") or data.get("purpose") or "Visitor"
-    expected_duration = int(data.get("expected_duration_minutes") or 30)
+    purpose_text = str(data.get("purpose") or "").strip()
+    try:
+        expected_duration = int(data.get("expected_duration_minutes") or 0)
+    except (TypeError, ValueError):
+        expected_duration = 0
+    gate_mode = str(data.get("gate_mode") or data.get("mode") or "entry").strip().lower()
+
+    if gate_mode != "exit":
+        # ENTRY requires full details before anyone is marked present
+        missing = []
+        if not full_name or full_name.lower() == "visitor":
+            missing.append("name")
+        if len(phone) < 10:
+            missing.append("phone")
+        if not purpose_text:
+            missing.append("purpose")
+        if expected_duration <= 0:
+            missing.append("expected_duration_minutes")
+        if missing:
+            return jsonify({
+                "status": "INVALID",
+                "error": "Missing or invalid fields: " + ", ".join(missing),
+                "missing": missing,
+            }), 400
+    else:
+        expected_duration = expected_duration or 30
 
     session: Session = get_session_factory()()
     try:
@@ -158,6 +232,16 @@ def voice_checkin():
         if len(phone) >= 10:
             p_hash = _phone_hash(phone)
             visitor = session.query(Visitor).filter(Visitor.phone_hash == p_hash, Visitor.status == "ACTIVE").first()
+
+        if not visitor and gate_mode == "exit":
+            # Exit screen never registers a new visitor
+            return jsonify({
+                "status": "NOT_PRESENT",
+                "event_type": "EXIT",
+                "error": NO_ACTIVE_ENTRY_EN,
+                "reply_tamil": NO_ACTIVE_ENTRY_TA,
+                "reply_english": NO_ACTIVE_ENTRY_EN,
+            }), 404
 
         if not visitor:
             # Create new visitor record
@@ -199,18 +283,68 @@ def voice_checkin():
             except Exception as e:
                 current_app.logger.warning("Kiosk face capture enrollment skipped: %s", e)
 
-        # Check if already present; if not, record ENTRY
-        if not is_visitor_present(session, visitor.id):
-            entry = record_gate_event(
-                session,
-                visitor_id=visitor.id,
-                event_type="ENTRY",
-                source="KIOSK",
-                expected_duration_minutes=expected_duration,
-            )
+        # Strict Separation: Entry gate ONLY handles ENTRY, Exit gate ONLY handles EXIT
+        if gate_mode == "exit":
+            if not is_visitor_present(session, visitor.id):
+                return jsonify({
+                    "status": "NOT_PRESENT",
+                    "event_type": "EXIT",
+                    "visitor": visitor.to_dict(),
+                    "error": NO_ACTIVE_ENTRY_EN,
+                    "reply_tamil": NO_ACTIVE_ENTRY_TA,
+                    "reply_english": NO_ACTIVE_ENTRY_EN,
+                }), 404
+            try:
+                exit_entry = record_gate_event(session, visitor_id=visitor.id, event_type="EXIT", source="KIOSK")
+            except NotPresentError:
+                return jsonify({
+                    "status": "NOT_PRESENT", "event_type": "EXIT",
+                    "error": NO_ACTIVE_ENTRY_EN,
+                    "reply_tamil": NO_ACTIVE_ENTRY_TA, "reply_english": NO_ACTIVE_ENTRY_EN,
+                }), 404
+            log_audit_event(session, "VOICE_KIOSK_EXIT", "Visitor", str(visitor.id), details={
+                "source": "VOICE_KIOSK",
+                "exit_id": exit_entry.id
+            })
+            return jsonify({
+                "status": "CHECKED_OUT",
+                "event_type": "EXIT",
+                "visitor": visitor.to_dict(),
+                "message": EXIT_RECORDED_TA,
+                "reply_tamil": EXIT_RECORDED_TA,
+                "reply_english": "Thank you for visiting today. Your exit has been recorded."
+            }), 200
+        else:
+            # ENTRY GATE: reject if an active visit already exists (never auto-close)
+            if is_visitor_present(session, visitor.id):
+                return jsonify({
+                    "status": "ALREADY_ENTERED",
+                    "event_type": "ENTRY",
+                    "visitor": visitor.to_dict(),
+                    "error": DUPLICATE_ENTRY_EN,
+                    "reply_tamil": DUPLICATE_ENTRY_TA,
+                    "reply_english": DUPLICATE_ENTRY_EN,
+                }), 409
+
+            try:
+                entry = record_gate_event(
+                    session,
+                    visitor_id=visitor.id,
+                    event_type="ENTRY",
+                    source="KIOSK",
+                    expected_duration_minutes=expected_duration,
+                    purpose=purpose_text,
+                )
+            except AlreadyPresentError:
+                return jsonify({
+                    "status": "ALREADY_ENTERED", "event_type": "ENTRY",
+                    "error": DUPLICATE_ENTRY_EN,
+                    "reply_tamil": DUPLICATE_ENTRY_TA, "reply_english": DUPLICATE_ENTRY_EN,
+                }), 409
             log_audit_event(session, "VOICE_KIOSK_ENTRY", "Visitor", str(visitor.id), details={
                 "source": "VOICE_KIOSK",
                 "expected_duration_minutes": expected_duration,
+                "purpose": purpose_text,
                 "entry_id": entry.id
             })
             return jsonify({
@@ -220,29 +354,228 @@ def voice_checkin():
                 "expected_duration_minutes": expected_duration,
                 "message": f"வருகை பதிவு செய்யப்பட்டது ({expected_duration} நிமிடம் அனுமதிக்கப்பட்டுள்ளது)."
             }), 201
+    except Exception as e:
+        session.rollback()
+        return jsonify({"error": str(e)}), 400
+    finally:
+        session.close()
+
+
+@registration_bp.route("/kiosk/identify-face", methods=["POST"])
+def kiosk_identify_face():
+    """Identify if person standing in front of kiosk is an enrolled returning visitor.
+    Uses 512-d ArcFace / InsightFace embeddings matched against Supabase vector embeddings.
+    """
+    import base64
+    import cv2
+    import numpy as np
+
+    data = request.get_json(silent=True) or {}
+    photo_b64 = data.get("photo_base64")
+    if not photo_b64 and "photo" in request.files:
+        photo_bytes = request.files["photo"].read()
+        arr = np.frombuffer(photo_bytes, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    elif photo_b64:
+        if "," in photo_b64:
+            photo_b64 = photo_b64.split(",", 1)[1]
+        try:
+            img_bytes = base64.b64decode(photo_b64)
+            arr = np.frombuffer(img_bytes, dtype=np.uint8)
+            img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        except Exception as dec_err:
+            return jsonify({"error": f"Invalid base64: {dec_err}"}), 400
+    else:
+        return jsonify({"error": "No image provided"}), 400
+
+    if img is None or img.size == 0:
+        return jsonify({"error": "Empty or undecodable image"}), 400
+
+    from services.face_service import get_face_service
+    from services.visitor_service import is_visitor_present
+
+    fs = get_face_service()
+    if not fs.is_ready():
+        return jsonify({
+            "matched": False,
+            "face_detected": False,
+            "message": "Face recognition service initializing",
+            "greeting_tamil": "வணக்கம்! உங்கள் பெயர் மற்றும் எதற்காக வந்திருக்கிறீர்கள் என்று கூறவும்.",
+            "greeting_english": "Welcome! Please tell us your name and purpose of visit."
+        })
+
+    session: Session = get_session_factory()()
+    try:
+        gate_mode = str(request.args.get("mode") or (request.get_json(silent=True) or {}).get("mode") or "entry").strip().lower()
+        matches = fs.recognize_face(session, img, threshold=0.48, top_k=1)
+        if matches:
+            match = matches[0]
+            visitor = match.get("visitor") or {}
+            visitor_id = int(visitor.get("id") or 0)
+            is_present = is_visitor_present(session, visitor_id) if visitor_id else False
+            v_name = visitor.get("full_name") or "Visitor"
+            v_company = visitor.get("company") or ""
+
+            if gate_mode == "exit":
+                greeting_ta = f"வணக்கம் {v_name}! உங்கள் வருகைக்கு நன்றி, வெளியேறுதல் பதிவு செய்யப்படுகிறது."
+                greeting_en = f"Goodbye {v_name}! Thank you for visiting. Logging your exit."
+            else:
+                greeting_ta = (
+                    f"வணக்கம் {v_name}! இன்று எதற்காக வந்திருக்கிறீர்கள்? எவ்வளவு நேரம் வளாகத்தில் இருப்பீர்கள்?"
+                )
+                greeting_en = f"Welcome {v_name}! What is your purpose of visit and how long will you stay today?"
+
+            return jsonify({
+                "matched": True,
+                "face_detected": True,
+                "confidence": match.get("confidence"),
+                "is_present": is_present,
+                "visitor": visitor,
+                "greeting_tamil": greeting_ta,
+                "greeting_english": greeting_en,
+            })
         else:
-            # If already present, treat as auto-EXIT check
-            exit_entry = record_gate_event(
-                session,
-                visitor_id=visitor.id,
-                event_type="EXIT",
-                source="KIOSK",
-            )
-            log_audit_event(session, "VOICE_KIOSK_EXIT", "Visitor", str(visitor.id), details={
-                "source": "VOICE_KIOSK",
+            faces = fs.detect_and_extract(img)
+            face_detected = len(faces) > 0
+            if gate_mode == "exit":
+                greeting_ta = "வணக்கம்! நீங்கள் வெளியேறுவதை பதிவு செய்ய உங்கள் பெயர் கூறவும்."
+                greeting_en = "Hello! Please state your name to log your exit."
+            else:
+                greeting_ta = (
+                    "வணக்கம்! நீங்கள் யார் என்று தெரிந்து கொள்ளலாமா? எதற்காக வந்திருக்கிறீர்கள் என்று கூறுங்கள்."
+                    if face_detected
+                    else "வணக்கம்! கேமராவைப் பார்த்து நீங்கள் யார் மற்றும் எதற்காக வந்திருக்கிறீர்கள் என்று கூறவும்."
+                )
+                greeting_en = "Welcome! May we know who you are and why you have arrived today?"
+            return jsonify({
+                "matched": False,
+                "face_detected": face_detected,
+                "greeting_tamil": greeting_ta,
+                "greeting_english": greeting_en
+            })
+    finally:
+        session.close()
+
+
+@registration_bp.route("/kiosk/quick-checkin", methods=["POST"])
+def kiosk_quick_checkin():
+    """Fast one-tap or face-recognized check-in/out for returning visitors."""
+    data = request.get_json(silent=True) or {}
+    visitor_id = int(data.get("visitor_id") or 0)
+    expected_duration = int(data.get("expected_duration_minutes") or 30)
+    purpose = data.get("purpose")
+    company = data.get("company")
+    raw_mode = str(data.get("gate_mode") or data.get("mode") or "").strip().lower()
+
+    if visitor_id <= 0:
+        return jsonify({"error": "Valid visitor_id is required"}), 400
+
+    session: Session = get_session_factory()()
+    try:
+        visitor = session.query(Visitor).filter(Visitor.id == visitor_id, Visitor.status == "ACTIVE").first()
+        if not visitor:
+            return jsonify({"error": "Visitor not found"}), 404
+
+        if company and not visitor.company:
+            visitor.company = company
+        if purpose and visitor.category in ("Unknown", "Visitor", None):
+            visitor.category = purpose
+        session.commit()
+
+        from services.visitor_service import is_visitor_present, record_gate_event
+        is_present = is_visitor_present(session, visitor.id)
+
+        # If gate_mode is explicitly set, honour it; otherwise auto-detect
+        if raw_mode in ("entry", "exit"):
+            gate_mode = raw_mode
+        else:
+            gate_mode = "exit" if is_present else "entry"
+
+        if gate_mode == "exit":
+            if not is_present:
+                return jsonify({
+                    "status": "NOT_PRESENT",
+                    "event_type": "EXIT",
+                    "visitor": visitor.to_dict(),
+                    "reply_tamil": NO_ACTIVE_ENTRY_TA,
+                    "reply_english": NO_ACTIVE_ENTRY_EN,
+                }), 404
+
+            try:
+                exit_entry = record_gate_event(
+                    session,
+                    visitor_id=visitor.id,
+                    event_type="EXIT",
+                    source="KIOSK_FACE",
+                )
+            except NotPresentError:
+                return jsonify({
+                    "status": "NOT_PRESENT", "event_type": "EXIT",
+                    "reply_tamil": NO_ACTIVE_ENTRY_TA, "reply_english": NO_ACTIVE_ENTRY_EN,
+                }), 404
+
+            log_audit_event(session, "KIOSK_FACE_EXIT", "Visitor", str(visitor.id), details={
+                "source": "KIOSK_FACE",
                 "exit_id": exit_entry.id
             })
             return jsonify({
                 "status": "CHECKED_OUT",
                 "event_type": "EXIT",
                 "visitor": visitor.to_dict(),
-                "message": "வெளியேறுதல் பதிவு செய்யப்பட்டது. நன்றி!"
+                "message": EXIT_RECORDED_TA,
+                "reply_tamil": EXIT_RECORDED_TA,
+                "reply_english": "Thank you for visiting today. Your exit has been recorded."
             }), 200
+
+        else:
+            # ENTRY GATE — strictly reject if already present, never auto-close
+            if is_present:
+                return jsonify({
+                    "status": "ALREADY_ENTERED",
+                    "event_type": "ENTRY",
+                    "visitor": visitor.to_dict(),
+                    "error": DUPLICATE_ENTRY_EN,
+                    "reply_tamil": DUPLICATE_ENTRY_TA,
+                    "reply_english": DUPLICATE_ENTRY_EN,
+                }), 409
+
+            try:
+                entry = record_gate_event(
+                    session,
+                    visitor_id=visitor.id,
+                    event_type="ENTRY",
+                    source="KIOSK_FACE",
+                    expected_duration_minutes=expected_duration,
+                    purpose=purpose,
+                )
+            except AlreadyPresentError:
+                return jsonify({
+                    "status": "ALREADY_ENTERED", "event_type": "ENTRY",
+                    "error": DUPLICATE_ENTRY_EN,
+                    "reply_tamil": DUPLICATE_ENTRY_TA, "reply_english": DUPLICATE_ENTRY_EN,
+                }), 409
+
+            log_audit_event(session, "KIOSK_FACE_ENTRY", "Visitor", str(visitor.id), details={
+                "source": "KIOSK_FACE",
+                "expected_duration_minutes": expected_duration,
+                "entry_id": entry.id
+            })
+            dur_msg = f"{expected_duration} நிமிடங்கள்" if expected_duration < 60 else f"{expected_duration // 60} மணி நேரம்"
+            return jsonify({
+                "status": "CHECKED_IN",
+                "event_type": "ENTRY",
+                "visitor": visitor.to_dict(),
+                "expected_duration_minutes": expected_duration,
+                "message": f"வருகை பதிவு செய்யப்பட்டது! நீங்கள் {dur_msg} வரை வளாகத்தில் இருக்கலாம்.",
+                "reply_tamil": f"வருகை பதிவு செய்யப்பட்டது! நீங்கள் {dur_msg} வரை வளாகத்தில் இருக்கலாம்.",
+                "reply_english": f"Entry confirmed! You are registered for {expected_duration} minutes."
+            }), 201
     except Exception as e:
         session.rollback()
         return jsonify({"error": str(e)}), 400
     finally:
         session.close()
+
 
 
 @registration_bp.route("/photos/<path:filename>", methods=["GET"])

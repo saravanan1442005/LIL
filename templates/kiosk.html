@@ -34,12 +34,18 @@
           animation: {
             'pulse-fast': 'pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             'ripple': 'ripple 2s infinite ease-in-out',
+            'scan': 'scan 2.5s ease-in-out infinite alternate',
+            'bounce-once': 'bounce 0.8s ease-in-out',
           },
           keyframes: {
             ripple: {
-              '0%': { transform: 'scale(0.95)', opacity: '0.8' },
-              '50%': { transform: 'scale(1.15)', opacity: '0.4' },
-              '100%': { transform: 'scale(0.95)', opacity: '0.8' },
+              '0%': { transform: 'scale(0.96)', opacity: '0.85' },
+              '50%': { transform: 'scale(1.08)', opacity: '0.45' },
+              '100%': { transform: 'scale(0.96)', opacity: '0.85' },
+            },
+            scan: {
+              '0%': { top: '5%' },
+              '100%': { top: '90%' }
             }
           }
         }
@@ -48,183 +54,220 @@
   </script>
   <style>
     body {
-      background-color: #0B0F19;
+      background-color: #070B14;
       color: #F8FAFC;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
-    .orb-glow {
-      box-shadow: 0 0 60px 15px rgba(16, 185, 129, 0.45), inset 0 0 30px rgba(52, 211, 153, 0.6);
-    }
-    .orb-listening {
-      box-shadow: 0 0 80px 25px rgba(245, 158, 11, 0.65), inset 0 0 35px rgba(251, 191, 36, 0.8);
-    }
-    .orb-success {
-      box-shadow: 0 0 80px 25px rgba(16, 185, 129, 0.75), inset 0 0 35px rgba(52, 211, 153, 0.9);
+    .hud-scanner {
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0) 0%, rgba(16, 185, 129, 0.5) 50%, rgba(16, 185, 129, 0) 100%);
     }
   </style>
 </head>
-<body class="h-screen w-screen overflow-hidden flex flex-col justify-between p-4 md:p-8">
+<body class="h-screen w-screen overflow-hidden flex flex-col justify-between p-3 md:p-6" onclick="unlockAudioContext()">
 
   <!-- TOP BAR -->
   <header class="flex items-center justify-between border-b border-slate-800/80 pb-3">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-xl">
-        🏢
+      <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-xl shadow-lg shadow-brand-500/10">
+        🛡️
       </div>
       <div>
-        <h1 class="text-lg md:text-xl font-bold tracking-tight text-white flex items-center gap-2">
-          EcoLifyBuddy <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30">Gate Kiosk</span>
+        <h1 class="text-base md:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          EcoLifyBuddy <span class="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30">AI Autonomous Gate Agent</span>
         </h1>
-        <p class="text-xs text-slate-400">தானியங்கி குரல் உதவியாளர் • Automatic Visitor Check-in</p>
+        <p class="text-[11px] text-slate-400">தானியங்கி குரல் &amp; முக அங்கீகார செக்-இன் • Real-time AI Assistant</p>
       </div>
     </div>
 
-    <!-- Right Controls: Language & Live Clock -->
-    <div class="flex items-center gap-3">
-      <button id="lang-btn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition">
+    <!-- Gate Selector, Audio Unlock, Gemini Live Toggle & Language Controls -->
+    <div class="flex items-center gap-2 flex-wrap justify-end">
+      <!-- Entry vs Exit Gate Switcher -->
+      <div class="flex items-center bg-slate-900 border border-slate-700 rounded-xl p-0.5 shadow-sm">
+        <a href="/entry" id="gate-entry-tab" class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-brand-600 text-white shadow-xs">
+          🚪 நுழைவு (Entry)
+        </a>
+        <a href="/exit" id="gate-exit-tab" class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-400 hover:text-white">
+          🚶 வெளியேறுதல் (Exit)
+        </a>
+      </div>
+
+      <button id="live-api-toggle-btn" onclick="toggleGeminiLiveMode()" title="Toggle Gemini Multimodal Live API (ai.google.dev/gemini-api/docs/live-api)" class="px-3 py-1.5 rounded-xl bg-purple-950/80 border border-purple-500/40 text-purple-300 text-xs font-bold transition flex items-center gap-1.5 shadow-sm hover:bg-purple-900/80">
+        <span>⚡</span> <span id="live-api-label">Live API: Auto</span>
+      </button>
+      <button id="audio-unlock-btn" onclick="unlockAudioContext(true)" class="px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition flex items-center gap-1.5 shadow-sm hover:bg-emerald-900/80">
+        <span>🔊</span> <span id="audio-status-label">குரல் இயக்கம் (Audio Active)</span>
+      </button>
+      <button id="lang-btn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition">
         🌐 <span id="lang-label">தமிழ் (Tamil)</span>
       </button>
-      <div id="live-clock" class="text-xs font-mono px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+      <div id="live-clock" class="text-xs font-mono px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hidden sm:block">
         --:--:--
       </div>
     </div>
   </header>
 
   <!-- MAIN KIOSK INTERACTION AREA -->
-  <main class="flex-1 flex flex-col md:flex-row items-center justify-center gap-6 lg:gap-12 my-auto max-w-6xl mx-auto w-full">
+  <main class="flex-1 flex flex-col lg:flex-row items-stretch justify-center gap-5 my-auto max-w-6xl mx-auto w-full py-2">
     
-    <!-- LEFT: Camera & Interactive AI Voice Avatar -->
-    <div class="flex flex-col items-center justify-center text-center w-full md:w-1/2">
+    <!-- LEFT COLUMN: Live Camera HUD & Voice Visualizer -->
+    <div class="flex flex-col items-center justify-between text-center w-full lg:w-1/2 bg-slate-900/60 border border-slate-800/80 rounded-3xl p-5 shadow-2xl backdrop-blur-md">
       
-      <!-- AI Voice Avatar Orb -->
-      <div class="relative mb-6">
-        <div id="orb-container" class="w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 p-1 orb-glow animate-ripple transition-all duration-500 flex items-center justify-center cursor-pointer" onclick="manualStartVoice()">
-          <div class="w-full h-full rounded-full bg-slate-950 flex flex-col items-center justify-center p-4 overflow-hidden relative shadow-inner">
-            <canvas id="photo-canvas" class="hidden"></canvas>
-            <span id="agent-icon" class="text-5xl md:text-6xl z-10 animate-bounce">🎙️</span>
-            <span id="agent-pulse-text" class="text-[11px] font-bold text-brand-400 z-10 mt-1 uppercase tracking-wider">பேசத் தயாராக உள்ளது</span>
+      <!-- Live Camera Vision HUD Viewfinder -->
+      <div class="relative w-full aspect-4/3 max-w-md rounded-2xl overflow-hidden border-2 border-brand-500/60 shadow-2xl bg-black">
+        <!-- Live Video Element -->
+        <video id="kiosk-live-cam" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
+        <canvas id="vision-canvas" class="hidden"></canvas>
+        
+        <!-- Biometric Target Box Overlay -->
+        <div class="absolute inset-4 rounded-2xl border border-dashed border-emerald-400/50 pointer-events-none flex flex-col justify-between p-2">
+          <div class="flex justify-between items-center text-[11px] font-mono text-emerald-400 font-bold bg-slate-950/80 px-2.5 py-1 rounded-md backdrop-blur-sm">
+            <span id="face-scan-status">🔴 WAITING FOR VISITOR...</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          </div>
+          <!-- Animated Laser Scan Bar -->
+          <div class="absolute left-0 right-0 h-1 hud-scanner animate-scan pointer-events-none"></div>
+          <div class="text-[10px] text-center font-mono text-slate-400 bg-slate-950/80 py-1 rounded">
+            AUTONOMOUS HUMAN FACE RECOGNITION
           </div>
         </div>
+
+        <!-- Recognition Banner Overlay -->
+        <div id="recognition-banner" class="absolute bottom-3 left-3 right-3 hidden py-2 px-3 rounded-xl bg-emerald-600/95 text-white text-xs font-bold shadow-xl backdrop-blur-md flex items-center justify-center gap-2">
+          <span>✅</span> <span id="recognition-name">அடையாளம் காணப்பட்டது</span>
+        </div>
       </div>
 
-      <!-- Spoken Assistant Message Text -->
-      <!-- Spoken Assistant Message Text -->
-      <div class="max-w-md w-full bg-slate-900/80 border border-slate-800 rounded-2xl p-4 md:p-5 shadow-xl backdrop-blur-md">
-        <p class="text-xs font-semibold text-brand-400 uppercase tracking-widest mb-1.5" id="agent-role-label">AI Security Voice Agent</p>
+      <!-- Spoken Assistant Prompt Banner -->
+      <div class="w-full max-w-md bg-slate-950/90 border border-slate-800 rounded-2xl p-3.5 my-3 shadow-xl text-left">
+        <div class="flex items-center justify-between mb-1.5">
+          <p class="text-[11px] font-bold text-brand-400 uppercase tracking-wider" id="agent-role-label">AI Gate Reception Agent</p>
+          <span id="agent-state-pill" class="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-semibold">Ready</span>
+        </div>
         <h2 id="agent-speech" class="text-base md:text-lg font-bold text-white leading-snug">
-          வணக்கம்! உங்களது பெயர் என்ன?
+          வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?
         </h2>
-        <p id="user-heard-text" class="text-xs text-amber-300/90 italic mt-2 min-h-[1.2rem]">
-          (பேசத் தொடங்க வட்டத்தைத் தொடவும் அல்லது பேசுக பட்டனை அழுத்தவும்)
-        </p>
       </div>
 
-      <!-- Quick Action Buttons -->
-      <div class="flex items-center gap-2 mt-4 flex-wrap justify-center">
-        <button onclick="startConversation()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-teal-500/20 active:scale-95">
-          <span>🔊</span> உரையாடலைத் தொடங்கு (Start Voice Chat)
+      <!-- Live Speech Analyzer & Audio Level Meter -->
+      <div id="live-speech-card" class="w-full max-w-md bg-slate-950/90 border border-amber-500/40 rounded-2xl p-3 shadow-xl text-left">
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="flex items-center gap-1.5">
+            <span id="speech-indicator-dot" class="w-2.5 h-2.5 rounded-full bg-slate-500 transition-all"></span>
+            <p class="text-[11px] font-bold text-amber-400 uppercase tracking-wider" id="speech-title-label">🎙️ குரல் பகுப்பாய்வு (Live Subtitles):</p>
+          </div>
+          <div id="mic-visualizer" class="flex items-center gap-1 h-3.5 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+            <span class="v-bar w-1 bg-slate-600 rounded-full h-1 transition-all"></span>
+            <span class="v-bar w-1 bg-slate-600 rounded-full h-2 transition-all"></span>
+            <span class="v-bar w-1 bg-slate-600 rounded-full h-3 transition-all"></span>
+            <span class="v-bar w-1 bg-slate-600 rounded-full h-1.5 transition-all"></span>
+            <span class="v-bar w-1 bg-slate-600 rounded-full h-2.5 transition-all"></span>
+          </div>
+        </div>
+
+        <div id="user-heard-text" class="text-sm md:text-base text-amber-200 font-bold min-h-[2.5rem] bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800/80 flex items-center">
+          (முன்னால் நின்றாலே AI தானாகப் பேசும்...)
+        </div>
+      </div>
+
+      <!-- Quick Action Controls -->
+      <div class="flex items-center gap-2 mt-3 flex-wrap justify-center w-full max-w-md">
+        <button onclick="startConversationManual()" class="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-teal-500/20 active:scale-95">
+          <span>🔊</span> பேசத் தொடங்கு
         </button>
-        <button onclick="triggerVoiceCheck()" id="speak-btn" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20 active:scale-95">
+        <button onclick="triggerVoiceCheck()" id="speak-btn" class="flex-1 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-brand-500/20 active:scale-95">
           <span>🎙️</span> பேசுக (Speak Now)
         </button>
-        <button onclick="resetKiosk()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition active:scale-95">
-          🔄 ரீசெட் (Reset)
+        <button onclick="resetKiosk()" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition active:scale-95">
+          🔄 ரீசெட்
         </button>
-      </div>
-
-      <!-- Dynamic Step-Based Quick Answer Chips -->
-      <div id="dynamic-chips-container" class="mt-4 w-full max-w-md bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3">
-        <div class="flex items-center justify-between mb-2">
-          <span id="chips-title" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">⚡ விரைவு பதில்கள் (Quick Tap):</span>
-          <span id="chips-step" class="text-[10px] text-brand-400 font-semibold">படி 1: பெயர் (Step 1)</span>
-        </div>
-        
-        <!-- Step 1 Name Chips -->
-        <div id="chips-name" class="flex flex-wrap gap-1.5 justify-center">
-          <button type="button" onclick="selectQuickName('ஐயனார்')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-600 text-slate-200 border border-slate-700 transition">👤 ஐயனார்</button>
-          <button type="button" onclick="selectQuickName('சுரேஷ்')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-600 text-slate-200 border border-slate-700 transition">👤 சுரேஷ்</button>
-          <button type="button" onclick="selectQuickName('குமார்')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-600 text-slate-200 border border-slate-700 transition">👤 குமார்</button>
-          <button type="button" onclick="selectQuickName('விக்னேஷ்')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-600 text-slate-200 border border-slate-700 transition">👤 விக்னேஷ்</button>
-          <button type="button" onclick="selectQuickName('ரமேஷ்')" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-600 text-slate-200 border border-slate-700 transition">👤 ரமேஷ்</button>
-        </div>
-
-        <!-- Step 2 Purpose Chips (Initially hidden) -->
-        <div id="chips-purpose" class="hidden flex flex-wrap gap-1.5 justify-center">
-          <button type="button" onclick="selectQuickPurpose('Delivery', 'Swiggy', 30)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600 text-slate-200 border border-slate-700 transition">🍔 ஃபுட் டெலிவரி (Swiggy - 30 நிமிடம்)</button>
-          <button type="button" onclick="selectQuickPurpose('Delivery', 'Zomato', 30)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600 text-slate-200 border border-slate-700 transition">🍕 Zomato (30 நிமிடம்)</button>
-          <button type="button" onclick="selectQuickPurpose('Electrician', '', 60)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-600 text-slate-200 border border-slate-700 transition">⚡ எலக்ட்ரீசியன் (1 மணி)</button>
-          <button type="button" onclick="selectQuickPurpose('Plumber', '', 60)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-200 border border-slate-700 transition">🚰 பிளம்பர் (1 மணி)</button>
-          <button type="button" onclick="selectQuickPurpose('Delivery', 'Amazon', 15)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-600 text-slate-200 border border-slate-700 transition">📦 அமேசான் பார்சல் (15 நிமிடம்)</button>
-          <button type="button" onclick="selectQuickPurpose('Guest', '', 60)" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-purple-600 text-slate-200 border border-slate-700 transition">👥 விருந்தினர் (Guest)</button>
-        </div>
       </div>
     </div>
 
-    <!-- RIGHT: Extracted Details & Touch Input Fallback -->
-    <div class="w-full md:w-1/2 bg-slate-900/90 border border-slate-800/90 rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
+    <!-- RIGHT COLUMN: Conversational Live Feed & Admitted Status -->
+    <div class="w-full lg:w-1/2 bg-slate-900/90 border border-slate-800/90 rounded-3xl p-5 shadow-2xl flex flex-col justify-between">
       
-      <div>
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-          <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-            <span>📋</span> பதிவு விவரங்கள் (Visitor Info)
+      <!-- Conversation Header -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-200">
+            💬 நேரடி உரையாடல் (Live Conversation Feed)
           </h3>
-          <span id="entry-badge" class="px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-slate-800 text-slate-400">
-            Awaiting Input
-          </span>
         </div>
+        <span id="entry-badge" class="px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-slate-800 text-slate-400">
+          Awaiting Input
+        </span>
+      </div>
 
-        <!-- Visitor Info Cards -->
-        <div class="space-y-3.5">
-          <!-- Name -->
-          <div>
-            <label class="text-[11px] font-semibold text-slate-400 uppercase">பார்வையாளர் பெயர் (Name)</label>
-            <input type="text" id="v-name" placeholder="எ.கா. Ramesh / சுரேஷ்" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm font-semibold focus:border-brand-500 outline-none">
+      <!-- Dialogue History Stream Container -->
+      <div id="convo-feed-container" class="flex-1 overflow-y-auto space-y-2.5 pr-1 max-h-[360px] no-scrollbar">
+        <!-- Initial Agent Welcome Message -->
+        <div class="flex items-start gap-2.5">
+          <div class="w-7 h-7 rounded-lg bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-sm shrink-0">
+            🤖
           </div>
-
-          <!-- Purpose & Company -->
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-[11px] font-semibold text-slate-400 uppercase">வேலை / நோக்கம் (Purpose)</label>
-              <select id="v-purpose" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm font-semibold focus:border-brand-500 outline-none">
-                <option value="Delivery">Delivery (டெலிவரி)</option>
-                <option value="Electrician">Electrician (எலக்ட்ரீசியன்)</option>
-                <option value="Plumber">Plumber (பிளம்பர்)</option>
-                <option value="Housekeeping">Housekeeping (வேலை)</option>
-                <option value="Technician">Technician</option>
-                <option value="Guest">Guest (விருந்தினர்)</option>
-                <option value="Vendor">Vendor</option>
-                <option value="Other">Other (பிற)</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-[11px] font-semibold text-slate-400 uppercase">நிறுவனம் (Company)</label>
-              <input type="text" id="v-company" placeholder="Zomato, Swiggy..." class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm font-semibold focus:border-brand-500 outline-none">
-            </div>
-          </div>
-
-          <!-- Duration -->
-          <div>
-            <label class="text-[11px] font-semibold text-slate-400 uppercase">அனுமதிக்கப்பட்ட நேரம் (Expected Duration)</label>
-            <div class="grid grid-cols-3 gap-2 mt-1">
-              <button type="button" onclick="setDuration(15)" class="dur-btn py-2 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition" data-dur="15">15 நிமிடங்கள்</button>
-              <button type="button" onclick="setDuration(30)" class="dur-btn py-2 text-xs font-bold rounded-lg bg-brand-600/30 border border-brand-500 text-brand-300 transition" data-dur="30">30 நிமிடங்கள்</button>
-              <button type="button" onclick="setDuration(60)" class="dur-btn py-2 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition" data-dur="60">1 மணி நேரம்</button>
-            </div>
-          </div>
-
-          <!-- Phone Number -->
-          <div>
-            <label class="text-[11px] font-semibold text-slate-400 uppercase">மொபைல் எண் (Phone Number)</label>
-            <input type="tel" id="v-phone" maxlength="10" placeholder="10 இலக்க எண் உள்ளிடவும்" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-brand-400 font-mono text-base font-bold tracking-wider focus:border-brand-500 outline-none">
+          <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl rounded-tl-none p-3 text-xs text-slate-200 max-w-[85%] shadow-sm">
+            <p class="font-bold text-[10px] text-brand-400 uppercase tracking-wider mb-0.5">AI Security Agent</p>
+            <p id="convo-first-msg">வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?</p>
           </div>
         </div>
       </div>
 
-      <!-- Confirm Check-In Button -->
-      <div class="mt-6 pt-4 border-t border-slate-800 flex gap-3">
-        <button onclick="openPhotoCaptureStep()" id="submit-btn" class="flex-1 py-3.5 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white font-extrabold text-sm tracking-wide shadow-xl shadow-brand-500/25 transition active:scale-98 flex items-center justify-center gap-2">
-          <span>📸</span> <span id="submit-text">புகைப்படம் எடுத்து பதிவு செய்க (Photo &amp; Check-in)</span>
+      <!-- Live Captured Visitor Intent Badges -->
+      <div id="visitor-extracted-card" class="mt-4 pt-3 border-t border-slate-800/80">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+          <span>📋 கண்டறியப்பட்ட விவரங்கள் (Identified Details):</span>
+          <span id="process-state-indicator" class="text-brand-400 font-mono">Analyzing...</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5">
+            <span class="text-[10px] text-slate-400 block font-semibold">பெயர் (Name):</span>
+            <span id="card-val-name" class="font-bold text-white text-sm">—</span>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5">
+            <span class="text-[10px] text-slate-400 block font-semibold">நோக்கம் / தளம் (Purpose):</span>
+            <span id="card-val-purpose" class="font-bold text-emerald-400 text-sm">—</span>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5">
+            <span class="text-[10px] text-slate-400 block font-semibold">மொபைல் எண் (Phone):</span>
+            <span id="card-val-phone" class="font-bold text-amber-400 text-sm font-mono">—</span>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5">
+            <span class="text-[10px] text-slate-400 block font-semibold">அனுமதிக்கப்பட்ட நேரம் (Stay Time):</span>
+            <span id="card-val-duration" class="font-bold text-cyan-400 text-sm font-mono">—</span>
+          </div>
+        </div>
+
+        <!-- Quick Interactive Duration Selector -->
+        <div class="mt-2.5 pt-2 border-t border-slate-800/80">
+          <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+            <span>⏱️ தங்கும் நேரம் (Set Stay Duration):</span>
+            <span id="dur-display" class="text-cyan-400 font-mono font-bold">தேர்வு செய்க (Select)</span>
+          </div>
+          <div class="grid grid-cols-4 gap-1.5">
+            <button type="button" data-dur="15" onclick="setDuration(15)" class="dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition cursor-pointer">15 நிமி (15m)</button>
+            <button type="button" data-dur="30" onclick="setDuration(30)" class="dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition cursor-pointer">30 நிமி (30m)</button>
+            <button type="button" data-dur="60" onclick="setDuration(60)" class="dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition cursor-pointer">1 மணி (1h)</button>
+            <button type="button" data-dur="120" onclick="setDuration(120)" class="dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition cursor-pointer">2 மணி (2h)</button>
+          </div>
+        </div>
+
+        <!-- Hidden form inputs retained for background submission API compatibility -->
+        <input type="hidden" id="v-name">
+        <input type="hidden" id="v-purpose" value="Visitor">
+        <input type="hidden" id="v-company">
+        <input type="hidden" id="v-phone">
+      </div>
+
+      <!-- Action Confirmation Bar -->
+      <div class="hidden mt-3 pt-2 flex items-center gap-2">
+        <button onclick="submitDirectCheckin()" id="submit-btn" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white font-extrabold text-sm tracking-wide shadow-xl shadow-brand-500/25 transition active:scale-98 flex items-center justify-center gap-2">
+          <span>✅</span> <span id="submit-text">அனுமதி உறுதிசெய்க (Confirm)</span>
         </button>
       </div>
 
@@ -232,51 +275,123 @@
 
   </main>
 
-  <!-- MODAL: Face Photo Capture Step (Only Opens at the End) -->
-  <div id="photo-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl relative">
-      <div class="w-10 h-10 rounded-2xl bg-brand-500/20 text-brand-400 flex items-center justify-center mx-auto mb-3 text-xl">
-        📷
-      </div>
-      <h3 class="text-base font-bold text-white mb-1">பார்வையாளர் புகைப்படம் (Visitor Photo)</h3>
-      <p class="text-xs text-slate-400 mb-4">பாதுகாப்பு நோக்கத்திற்காக கேமராவைப் பார்த்து ஒருமுறை புன்னகைக்கவும்.</p>
-
-      <!-- Video Feed / Preview -->
-      <div class="relative w-56 h-56 mx-auto rounded-2xl overflow-hidden border-2 border-brand-500 shadow-xl bg-black">
-        <video id="kiosk-cam-modal" autoplay playsinline muted class="w-full h-full object-cover"></video>
-        <canvas id="snapshot-canvas" class="hidden"></canvas>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="flex gap-2.5 mt-5">
-        <button onclick="closePhotoCaptureModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
-          ரத்து (Cancel)
-        </button>
-        <button onclick="captureAndSubmit()" id="capture-submit-btn" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white text-xs font-bold transition shadow-lg shadow-brand-500/25">
-          📸 படம் எடுத்து பதிவு (Snap &amp; Submit)
-        </button>
+  <!-- BIG GREEN TICK MARK MODAL (டிக் மாதிரி வரணும் - ON APPROVED) -->
+  <div id="approved-tick-modal" onclick="if (event.target === this) closeApprovedTickModal()" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 hidden">
+    <!-- Top-Right Close Button -->
+    <button onclick="closeApprovedTickModal()" class="absolute top-5 right-5 w-11 h-11 rounded-full bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 flex items-center justify-center text-lg font-bold shadow-xl transition active:scale-95 cursor-pointer z-20" title="Close (மூடு)">
+      ✕
+    </button>
+    <div class="relative flex items-center justify-center mb-6">
+      <div class="w-40 h-40 rounded-full bg-emerald-500/30 animate-ping absolute"></div>
+      <div class="w-36 h-36 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 border-4 border-emerald-300 flex items-center justify-center shadow-2xl shadow-emerald-500/80 z-10 animate-bounce-once">
+        <svg class="w-20 h-20 text-white drop-shadow-xl" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+        </svg>
       </div>
     </div>
+    <h2 class="text-3xl font-extrabold text-white tracking-tight mb-2 text-center" id="approved-title">
+      அனுமதி அளிக்கப்பட்டது
+    </h2>
+    <p class="text-xl font-bold text-emerald-400 mb-4 text-center" id="approved-subtitle">
+      ஓகே, நீங்கள் உள்ளே போகலாம்! (You May Enter)
+    </p>
+    <div class="px-5 py-2.5 rounded-2xl bg-slate-900 border border-emerald-500/40 text-xs text-emerald-300 font-mono tracking-wider shadow-inner flex items-center gap-2 mb-4">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      CHECK-IN CONFIRMED • OVERSTAY TIMER ACTIVE
+    </div>
+    <!-- Bottom Dismiss Button -->
+    <button onclick="closeApprovedTickModal()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-xs font-bold transition flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer">
+      <span>✕</span> மூடு (Close)
+    </button>
   </div>
 
   <!-- FOOTER -->
-  <footer class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-800/80 pt-2.5">
-    <span>EcoLifyBuddy Smart Gate System • DPDP Act Compliant</span>
+  <footer class="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-800/80 pt-2">
+    <span>EcoLifyBuddy Smart Security Kiosk • Overstay Active Monitoring</span>
     <span class="flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-      Online &amp; Active
+      <span id="vision-status-text">Face Recognition Online</span>
     </span>
   </footer>
 
   <!-- SCRIPT -->
   <script>
-    // State
+    // Gate Mode: 'entry' or 'exit' (passed from Flask template context or URL query/path)
+    const currentGateMode = ("{{ gate_mode or '' }}".toLowerCase() || (window.location.pathname.includes('/exit') ? 'exit' : 'entry'));
+
+    // State Variables
     let currentLang = 'ta-IN'; // 'ta-IN' or 'en-US'
-    let selectedDuration = 30;
-    let recognition = null;
+    let selectedDuration = null;
     let isListening = false;
-    let currentStep = 'GREETING'; // GREETING -> ASK_PHONE -> CONFIRMED
-    let autoDetectTimer = null;
+    let recognitionActive = false;
+    let currentRecInstance = null;
+    let currentTtsAudio = null;
+    let recognizedVisitor = null; // Stored if face matches existing visitor
+    let activeVisitorData = {};   // Multi-turn conversational data
+    let convStep = 'IDLE';        // 'IDLE', 'CONFIRM_ENTRY', 'CONFIRM_EXIT', 'NEW_VISITOR', 'DONE'
+    let liveStream = null;
+    let faceScanInterval = null;
+    let audioContextUnlocked = false;
+    let autoTriggerCooldown = false;
+    let exitCountdownInterval = null;
+
+    // Bilingual intent classification helpers (Tamil & English)
+    function isPositiveIntent(text) {
+      if (!text) return false;
+      const t = text.toLowerCase().trim();
+      const posPatterns = [
+        /ஆம்/, /ஆமாம்/, /ஆமா/, /சரி/, /நுழைகிறேன்/, /வெளியேறுகிறேன்/, /உள்ள போறேன்/, /வெளிய போறேன்/,
+        /ஓகே/, /எஸ்/, /கண்டிப்பா/, /ஆமாங்க/, /சரிங்க/, /போறேன்/, /போகிறேன்/, /உள்ளே செல்கிறேன்/,
+        /வெளியே செல்கிறேன்/, /உள்ள போலாம்/, /உள்ளே/, /வெளியே/, /நுழைய/, /வெளியேற/, /செல்கிறேன்/,
+        /\byes\b/, /\byeah\b/, /\byep\b/, /\byup\b/, /\bsure\b/, /\bok\b/, /\bokay\b/,
+        /\bcorrect\b/, /\bconfirm\b/, /\benter\b/, /\bexit\b/, /\bproceed\b/, /\bright\b/,
+        /\baffirmative\b/, /\bentering\b/, /\bleaving\b/
+      ];
+      return posPatterns.some(p => p.test(t));
+    }
+
+    function isNegativeIntent(text) {
+      if (!text) return false;
+      const t = text.toLowerCase().trim();
+      const negPatterns = [
+        /இல்லை/, /இல்ல/, /இல்லங்க/, /வேண்டாம்/, /வேணாம்/, /நுழையவில்லை/, /வெளியேறவில்லை/,
+        /தவறு/, /நோ/, /இப்ப இல்ல/, /இப்ப வேண்டாம்/, /வேணாங்க/, /வேண்டாங்க/,
+        /\bno\b/, /\bnope\b/, /\bnot\s+now\b/, /\bnot\s+entering\b/, /\bnot\s+leaving\b/,
+        /\bcancel\b/, /\bdon'?t\b/, /\bstop\b/, /\bnegative\b/, /\bwrong\b/, /\bnever\b/
+      ];
+      return negPatterns.some(p => p.test(t));
+    }
+
+    // Apply Gate Mode (Entry vs Exit) UI adaptations
+    function applyGateModeStyles() {
+      const isExit = currentGateMode === 'exit';
+      const entryTab = document.getElementById('gate-entry-tab');
+      const exitTab = document.getElementById('gate-exit-tab');
+
+      if (isExit) {
+        if (exitTab) exitTab.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-amber-600 text-white shadow-xs';
+        if (entryTab) entryTab.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-400 hover:text-white';
+        
+        document.title = "EcoLifyBuddy • AI Exit Gate Kiosk";
+        const roleLbl = document.getElementById('agent-role-label');
+        if (roleLbl) roleLbl.innerText = "AI Gate Checkout Agent (வெளியேறுதல் வாயில்)";
+        const speechEl = document.getElementById('agent-speech');
+        if (speechEl) speechEl.innerText = "வணக்கம்! நீங்கள் வெளியேறுவதை பதிவு செய்ய கேமராவைப் பார்க்கவும்.";
+        
+        // Hide duration picker on exit
+        const chipsCont = document.getElementById('dynamic-chips-container');
+        if (chipsCont) chipsCont.classList.add('hidden');
+        const submitText = document.getElementById('submit-text');
+        if (submitText) submitText.innerText = "வெளியேறுதல் பதிவு செய்க (Confirm Exit)";
+      } else {
+        if (entryTab) entryTab.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-brand-600 text-white shadow-xs';
+        if (exitTab) exitTab.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-400 hover:text-white';
+        
+        document.title = "EcoLifyBuddy • AI Entry Gate Kiosk";
+        const roleLbl = document.getElementById('agent-role-label');
+        if (roleLbl) roleLbl.innerText = "AI Gate Reception Agent (நுழைவு வாயில்)";
+      }
+    }
 
     // Clock
     setInterval(() => {
@@ -284,14 +399,62 @@
       document.getElementById('live-clock').innerText = now.toLocaleTimeString();
     }, 1000);
 
-    // Set duration helper
+    // Audio Unlocker: Unlock Web Audio on any touch or click
+    function unlockAudioContext(fromButton = false) {
+      if (audioContextUnlocked) return;
+      audioContextUnlocked = true;
+      const btnLabel = document.getElementById('audio-status-label');
+      if (btnLabel) btnLabel.innerText = '🔊 குரல் தயார் (Audio Active)';
+      
+      // Warm up Web Speech
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.resume();
+        const silentUtterance = new SpeechSynthesisUtterance('');
+        window.speechSynthesis.speak(silentUtterance);
+      }
+      
+      if (fromButton && convStep === 'IDLE') {
+        const prompt = currentLang === 'ta-IN'
+          ? "வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?"
+          : "Welcome! Please state your name, purpose, phone number, and how long you will stay inside.";
+        speakText(prompt);
+      }
+    }
+
+    // Set Duration Helper
     function setDuration(mins) {
-      selectedDuration = mins;
+      if (!mins) {
+        selectedDuration = null;
+        if (activeVisitorData) activeVisitorData.expected_duration_minutes = null;
+        const durEl = document.getElementById('dur-display');
+        if (durEl) durEl.innerText = 'தேர்வு செய்க (Select)';
+        const cardDur = document.getElementById('card-val-duration');
+        if (cardDur) cardDur.innerText = '—';
+        document.querySelectorAll('.dur-btn').forEach(b => {
+          b.className = 'dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition';
+        });
+        return;
+      }
+      selectedDuration = parseInt(mins) || 30;
+      if (activeVisitorData) activeVisitorData.expected_duration_minutes = selectedDuration;
+      let durText;
+      if (selectedDuration >= 1440) {
+        const d = Math.round(selectedDuration / 1440);
+        durText = `${d} நாட்கள் (${d} ${d === 1 ? 'day' : 'days'})`;
+      } else if (selectedDuration >= 60) {
+        durText = `${selectedDuration / 60} மணி நேரம் (${(selectedDuration/60).toFixed(1)}h)`;
+      } else {
+        durText = `${selectedDuration} நிமிடங்கள்`;
+      }
+      const durEl = document.getElementById('dur-display');
+      if (durEl) durEl.innerText = durText;
+      const cardDur = document.getElementById('card-val-duration');
+      if (cardDur) cardDur.innerText = durText;
       document.querySelectorAll('.dur-btn').forEach(b => {
-        if (parseInt(b.getAttribute('data-dur')) === mins) {
-          b.className = 'dur-btn py-2 text-xs font-bold rounded-lg bg-brand-600/30 border border-brand-500 text-brand-300 transition';
+        if (parseInt(b.getAttribute('data-dur')) === selectedDuration) {
+          b.className = 'dur-btn py-1.5 text-xs font-bold rounded-lg bg-brand-600/30 border border-brand-500 text-brand-300 transition';
         } else {
-          b.className = 'dur-btn py-2 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition';
+          b.className = 'dur-btn py-1.5 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 hover:border-brand-500 text-slate-300 transition';
         }
       });
     }
@@ -301,104 +464,379 @@
       if (currentLang === 'ta-IN') {
         currentLang = 'en-US';
         document.getElementById('lang-label').innerText = 'English';
-        speakText("Welcome to EcoLifyBuddy. Please tell your name and purpose of visit.");
+        speakText("Welcome to EcoLifyBuddy. Please state your name, purpose of visit, and how long you will stay.");
       } else {
         currentLang = 'ta-IN';
         document.getElementById('lang-label').innerText = 'தமிழ் (Tamil)';
-        speakText("வணக்கம்! உங்கள் பெயர் மற்றும் எதற்காக இங்கே வந்திருக்கிறீர்கள்?");
+        speakText("வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?");
       }
     }
 
-    // Natural Tamil / English Speech Audio (Server-Backed gTTS with Caching)
-    let currentTtsAudio = null;
+    // =========================================================================
+    // 1. LIVE VISION CAMERA & AUTONOMOUS HUMAN DETECTION TRIGGER
+    // =========================================================================
+    async function initKioskLiveCamera() {
+      const videoElem = document.getElementById('kiosk-live-cam');
+      try {
+        // Ensure backend releases any hardware webcam lock so browser has exclusive access
+        await fetch('/api/release_webcam', { method: 'POST' }).catch(() => {});
 
+        liveStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+          audio: false
+        });
+        videoElem.srcObject = liveStream;
+        document.getElementById('vision-status-text').innerText = 'Face AI Vision Active';
+        
+        // Start autonomous scanner checking every 2 seconds
+        startAutonomousFaceScanner();
+      } catch (err) {
+        console.warn("Live camera access failed:", err);
+        document.getElementById('face-scan-status').innerText = '⚠️ CAMERA ACCESS NEEDED';
+        document.getElementById('vision-status-text').innerText = 'Camera offline';
+      }
+    }
+
+    function grabCameraSnapshotBase64() {
+      const videoElem = document.getElementById('kiosk-live-cam');
+      const canvas = document.getElementById('vision-canvas');
+      if (!videoElem || !videoElem.videoWidth) return null;
+
+      canvas.width = videoElem.videoWidth;
+      canvas.height = videoElem.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(videoElem, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg', 0.85);
+    }
+
+    function startAutonomousFaceScanner() {
+      if (faceScanInterval) clearInterval(faceScanInterval);
+
+      faceScanInterval = setInterval(async () => {
+        // Only run scan in IDLE state when not in an active conversation
+        if (convStep !== 'IDLE' || autoTriggerCooldown) return;
+
+        const photoB64 = grabCameraSnapshotBase64();
+        if (!photoB64) return;
+
+        try {
+          const res = await fetch(`/api/v2/registration/kiosk/identify-face?mode=${currentGateMode}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ photo_base64: photoB64, mode: currentGateMode })
+          });
+          const data = await res.json();
+
+          if (convStep !== 'IDLE' || autoTriggerCooldown) return;
+
+          if (data.matched && data.visitor) {
+            // CASE A: PERSON ALREADY EXISTING IN SYSTEM
+            handleReturningVisitorDetected(data.visitor, data.is_present);
+          } else if (data.face_detected) {
+            // CASE B: NEW PERSON WHOSE FACE IS NOT YET IN SYSTEM
+            handleNewHumanDetected();
+          } else {
+            document.getElementById('face-scan-status').innerText = '🔴 WAITING FOR VISITOR...';
+          }
+        } catch (e) {
+          // Scanner retry
+        }
+      }, 2000);
+    }
+
+    // Conversation bubble helper to stream chat naturally on the right side
+    function appendConvoBubble(speaker, text) {
+      const container = document.getElementById('convo-feed-container');
+      if (!container || !text) return;
+
+      const row = document.createElement('div');
+      if (speaker === 'ai') {
+        row.className = 'flex items-start gap-2.5 animate-fadeIn';
+        row.innerHTML = `
+          <div class="w-7 h-7 rounded-lg bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-sm shrink-0">
+            🤖
+          </div>
+          <div class="bg-slate-800/90 border border-slate-700/60 rounded-2xl rounded-tl-none p-3 text-xs text-slate-100 max-w-[85%] shadow-sm">
+            <p class="font-bold text-[10px] text-brand-400 uppercase tracking-wider mb-0.5">AI Security Agent</p>
+            <p class="leading-relaxed">${escapeHtml(text)}</p>
+          </div>
+        `;
+      } else {
+        row.className = 'flex items-end justify-end gap-2.5 animate-fadeIn';
+        row.innerHTML = `
+          <div class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl rounded-tr-none p-3 text-xs max-w-[85%] shadow-md">
+            <p class="font-bold text-[10px] text-emerald-200 uppercase tracking-wider mb-0.5 text-right">பார்வையாளர் (Visitor)</p>
+            <p class="leading-relaxed font-semibold">${escapeHtml(text)}</p>
+          </div>
+          <div class="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-sm shrink-0">
+            👤
+          </div>
+        `;
+      }
+      container.appendChild(row);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function updateVisitorCards(data) {
+      if (!data) return;
+      if (data.name) {
+        const el = document.getElementById('card-val-name');
+        if (el) el.innerText = data.name;
+      }
+      if (data.purpose || data.company) {
+        const el = document.getElementById('card-val-purpose');
+        if (el) el.innerText = data.company ? `${data.purpose || 'டெலிவரி'} (${data.company})` : (data.purpose || '—');
+      }
+      if (data.phone) {
+        const el = document.getElementById('card-val-phone');
+        if (el) el.innerText = data.phone;
+      }
+      const durEl = document.getElementById('card-val-duration');
+      if (durEl) {
+        if (data.expected_duration_minutes) {
+          const m = data.expected_duration_minutes;
+          if (m >= 1440) {
+            const d = Math.round(m / 1440);
+            durEl.innerText = `${d} நாட்கள் (${d} ${d === 1 ? 'day' : 'days'})`;
+          } else if (m >= 60) {
+            durEl.innerText = `${(m/60).toFixed(0)} மணி நேரம் (${m} mins)`;
+          } else {
+            durEl.innerText = `${m} நிமிடங்கள்`;
+          }
+        } else {
+          durEl.innerText = '—';
+        }
+      }
+    }
+
+    // AUTONOMOUS TRIGGER: Person Standing in Front of Camera (Unrecognized in DB)
+    function handleNewHumanDetected() {
+      if (convStep !== 'IDLE' || autoTriggerCooldown) return;
+
+      if (currentGateMode === 'exit') {
+        // EXIT GATE: Unknown person without active entry -> cannot exit
+        convStep = 'DONE';
+        autoTriggerCooldown = true;
+        const msg = currentLang === 'ta-IN'
+          ? "செயலில் உள்ள என்ட்ரி இல்லை. தயவுசெய்து முதலில் என்ட்ரி கேட் செல்லவும்."
+          : "No active entry found. Please visit the entry gate first.";
+        document.getElementById('face-scan-status').innerText = '🟡 NO ACTIVE ENTRY';
+        const ind = document.getElementById('process-state-indicator');
+        if (ind) ind.innerText = 'No Active Entry';
+        document.getElementById('agent-speech').innerText = msg;
+        appendConvoBubble('ai', msg);
+        speakText(msg, () => setTimeout(resetKiosk, 4000));
+        return;
+      }
+
+      // ENTRY GATE: New visitor detected -> initiate collection of details in Tamil
+      convStep = 'NEW_VISITOR';
+      activeVisitorData = {};
+      selectedDuration = null;
+      setDuration(null);
+      recognizedVisitor = null;
+
+      document.getElementById('face-scan-status').innerText = '🟢 NEW VISITOR APPROACHED';
+      const ind = document.getElementById('process-state-indicator');
+      if (ind) ind.innerText = 'Listening...';
+      
+      const prompt = currentLang === 'ta-IN'
+        ? "வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?"
+        : "Welcome! Please state your name, purpose of visit, mobile number, and how long you will stay inside.";
+
+      document.getElementById('agent-speech').innerText = prompt;
+      appendConvoBubble('ai', prompt);
+      speakText(prompt, () => {
+        startListening();
+      });
+    }
+
+    // PERSON ALREADY EXISTING IN SYSTEM
+    function handleReturningVisitorDetected(visitor, isPresent) {
+      if (convStep !== 'IDLE' || autoTriggerCooldown) return;
+
+      // ENTRY GATE: Duplicate entry check — if visitor is already present, strictly reject
+      if (currentGateMode !== 'exit' && isPresent) {
+        convStep = 'DONE';
+        autoTriggerCooldown = true;
+        const msg = currentLang === 'ta-IN'
+          ? `${visitor.full_name}, நீங்கள் ஏற்கனவே உள்ளே நுழைந்துவிட்டீர்கள். வெளியேற விரும்பினால் எக்ஸிட் திரைக்குச் செல்லவும்.`
+          : `${visitor.full_name}, you have already entered. Please proceed to the exit gate to leave.`;
+        document.getElementById('face-scan-status').innerText = `🟡 ALREADY INSIDE: ${visitor.full_name}`;
+        const ind = document.getElementById('process-state-indicator');
+        if (ind) ind.innerText = 'Already Inside';
+        document.getElementById('agent-speech').innerText = msg;
+        appendConvoBubble('ai', msg);
+        speakText(msg, () => setTimeout(resetKiosk, 5000));
+        return;
+      }
+
+      // EXIT GATE: If visitor does NOT have an active entry record, strictly reject exit
+      if (currentGateMode === 'exit' && !isPresent) {
+        convStep = 'DONE';
+        autoTriggerCooldown = true;
+        const msg = currentLang === 'ta-IN'
+          ? `${visitor.full_name}, செயலில் உள்ள என்ட்ரி இல்லை. தயவுசெய்து முதலில் என்ட்ரி கேட் செல்லவும்.`
+          : `${visitor.full_name}, no active entry found. Please visit the entry gate first.`;
+        document.getElementById('face-scan-status').innerText = `🟡 NO ACTIVE ENTRY: ${visitor.full_name}`;
+        const ind = document.getElementById('process-state-indicator');
+        if (ind) ind.innerText = 'No Active Entry';
+        document.getElementById('agent-speech').innerText = msg;
+        appendConvoBubble('ai', msg);
+        speakText(msg, () => setTimeout(resetKiosk, 5000));
+        return;
+      }
+
+      recognizedVisitor = visitor;
+      activeVisitorData = {
+        name: visitor.full_name,
+        company: '',
+        purpose: '',
+        phone: visitor.phone_number,
+        expected_duration_minutes: null
+      };
+
+      document.getElementById('v-name').value = visitor.full_name || '';
+      document.getElementById('v-phone').value = visitor.phone_number || '';
+      document.getElementById('v-company').value = '';
+      document.getElementById('v-purpose').value = '';
+      setDuration(null);
+      updateVisitorCards(activeVisitorData);
+
+      const banner = document.getElementById('recognition-banner');
+      banner.classList.remove('hidden');
+      document.getElementById('recognition-name').innerText = `அடையாளம் காணப்பட்டது: ${visitor.full_name}`;
+      document.getElementById('face-scan-status').innerText = `🟢 RECOGNIZED: ${visitor.full_name}`;
+      const ind = document.getElementById('process-state-indicator');
+      if (ind) ind.innerText = 'Listening...';
+
+      let greeting;
+      if (currentGateMode === 'exit') {
+        // EXIT GATE: Ask confirmation question: "Are you leaving the premises now?"
+        convStep = 'CONFIRM_EXIT';
+        greeting = currentLang === 'ta-IN'
+          ? `வணக்கம் ${visitor.full_name}! நீங்கள் தற்போது வளாகத்தை விட்டு வெளியேறுகிறீர்களா?`
+          : `Hello ${visitor.full_name}! Are you leaving the premises now?`;
+        document.getElementById('agent-speech').innerText = greeting;
+        appendConvoBubble('ai', greeting);
+        speakText(greeting, () => {
+          startListening();
+        });
+      } else {
+        // ENTRY GATE: Always ask purpose and duration each and every time!
+        convStep = 'CONFIRM_ENTRY';
+        greeting = currentLang === 'ta-IN'
+          ? `வணக்கம் ${visitor.full_name}! நீங்கள் இன்று எதற்காக வந்திருக்கிறீர்கள் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள்?`
+          : `Welcome ${visitor.full_name}! What is your purpose of visit today and how long will you stay inside?`;
+        document.getElementById('agent-speech').innerText = greeting;
+        appendConvoBubble('ai', greeting);
+        speakText(greeting, () => {
+          startListening();
+        });
+      }
+    }
+
+
+    // =========================================================================
+    // 2. GUARANTEED DUAL-ENGINE SPEECH SYNTHESIS (TTS)
+    // =========================================================================
     function speakText(text, callback) {
-      // Stop listening while speaking to avoid hearing itself
+      unlockAudioContext();
       stopListeningTemporary(false);
 
       document.getElementById('agent-speech').innerText = text;
-      setOrbState('speaking');
+      setAgentState('speaking');
 
       if (currentTtsAudio) {
         try { currentTtsAudio.pause(); currentTtsAudio = null; } catch(e){}
       }
 
-      const langCode = currentLang.includes('ta') ? 'ta' : 'en';
-      const url = `/api/v2/registration/kiosk/tts?text=${encodeURIComponent(text)}&lang=${langCode}`;
-
-      const audio = new Audio(url);
-      currentTtsAudio = audio;
-
-      let ended = false;
-      function finish() {
-        if (ended) return;
-        ended = true;
+      let finished = false;
+      function onFinish() {
+        if (finished) return;
+        finished = true;
         currentTtsAudio = null;
-        setOrbState('idle');
+        setAgentState('idle');
         if (callback) {
           callback();
         } else {
-          setTimeout(() => startListening(), 250);
+          setTimeout(() => {
+            if (convStep !== 'DONE') startListening();
+          }, 300);
         }
       }
 
-      audio.onended = finish;
-      audio.onerror = (e) => {
-        console.warn("Server TTS play error, trying browser synthesis fallback:", e);
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(text);
-          u.lang = currentLang;
-          u.onend = finish;
-          u.onerror = finish;
-          window.speechSynthesis.speak(u);
-        } else {
-          finish();
-        }
+      // 1. Try Server MP3
+      const langCode = currentLang.includes('ta') ? 'ta' : 'en';
+      const url = `/api/v2/registration/kiosk/tts?text=${encodeURIComponent(text)}&lang=${langCode}`;
+      const audio = new Audio(url);
+      currentTtsAudio = audio;
+
+      audio.onended = onFinish;
+      audio.onerror = () => {
+        fallbackBrowserSpeak(text, onFinish);
       };
 
       audio.play().catch(err => {
-        console.warn("Audio autoplay blocked by browser policy:", err);
-        // Autoplay may need first user click on page
-        finish();
+        fallbackBrowserSpeak(text, onFinish);
       });
     }
 
-    // Set Orb Visual State
-    function setOrbState(state) {
-      const orb = document.getElementById('orb-container');
-      const pulseText = document.getElementById('agent-pulse-text');
-      const icon = document.getElementById('agent-icon');
-      const speakBtn = document.getElementById('speak-btn');
+    function fallbackBrowserSpeak(text, callback) {
+      if (!('speechSynthesis' in window)) {
+        if (callback) callback();
+        return;
+      }
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = currentLang;
+        u.rate = 1.0;
+        u.pitch = 1.0;
 
-      if (state === 'listening') {
-        orb.className = 'w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-rose-600 via-amber-500 to-yellow-400 p-1 orb-listening animate-pulse transition-all duration-300 flex items-center justify-center cursor-pointer';
-        pulseText.innerText = currentLang === 'ta-IN' ? '🔴 கேட்கிறது... பேசவும்' : '🔴 Listening... speak now';
-        pulseText.className = 'text-[11px] font-bold text-amber-300 z-10 mt-1 uppercase tracking-wider';
-        icon.innerText = '👂';
+        const voices = window.speechSynthesis.getVoices();
+        const v = voices.find(v => v.lang && (v.lang.includes('ta') || v.lang.startsWith('ta')));
+        if (v) u.voice = v;
+
+        u.onend = () => { if (callback) callback(); };
+        u.onerror = () => { if (callback) callback(); };
+        window.speechSynthesis.speak(u);
+      } catch (e) {
+        if (callback) callback();
+      }
+    }
+
+    function setAgentState(state) {
+      const pill = document.getElementById('agent-state-pill');
+      const speakBtn = document.getElementById('speak-btn');
+      if (state === 'speaking') {
+        pill.innerText = '🔊 Speaking';
+        pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-brand-500/30 text-brand-300 font-bold';
+        if (speakBtn) {
+          speakBtn.className = 'px-4 py-2.5 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold';
+          speakBtn.innerHTML = '<span>🔊</span> பதிலளிக்கிறது (Speaking...)';
+        }
+      } else if (state === 'listening') {
+        pill.innerText = '🔴 Listening';
+        pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-rose-500/30 text-rose-300 font-bold animate-pulse';
         if (speakBtn) {
           speakBtn.className = 'px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-rose-500/30 animate-pulse';
           speakBtn.innerHTML = '<span>🛑</span> பேசி முடித்தேன் (Done Speaking)';
         }
-      } else if (state === 'speaking') {
-        orb.className = 'w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 p-1 orb-glow animate-ripple transition-all duration-500 flex items-center justify-center cursor-pointer';
-        pulseText.innerText = currentLang === 'ta-IN' ? '🔊 பதிலளிக்கிறது (Speaking...)' : '🔊 Speaking...';
-        pulseText.className = 'text-[11px] font-bold text-brand-400 z-10 mt-1 uppercase tracking-wider';
-        icon.innerText = '🗣️';
-        if (speakBtn) {
-          speakBtn.className = 'px-4 py-2.5 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold cursor-not-allowed';
-          speakBtn.innerHTML = '<span>⏳</span> கேட்கிறது (Listening soon...)';
-        }
-      } else if (state === 'success') {
-        orb.className = 'w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-300 p-1 orb-success transition-all duration-500 flex items-center justify-center cursor-pointer';
-        pulseText.innerText = 'அனுமதி அளிக்கப்பட்டது (Approved)';
-        pulseText.className = 'text-[11px] font-bold text-emerald-300 z-10 mt-1 uppercase tracking-wider';
-        icon.innerText = '✅';
       } else {
-        orb.className = 'w-44 h-44 md:w-56 md:h-56 rounded-full bg-gradient-to-tr from-brand-600 via-emerald-500 to-teal-400 p-1 orb-glow transition-all duration-500 flex items-center justify-center cursor-pointer';
-        pulseText.innerText = currentLang === 'ta-IN' ? 'பேசத் தயாராக உள்ளது' : 'Ready to talk';
-        pulseText.className = 'text-[11px] font-bold text-brand-400 z-10 mt-1 uppercase tracking-wider';
-        icon.innerText = '🎙️';
+        pill.innerText = 'Ready';
+        pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-semibold';
         if (speakBtn) {
           speakBtn.className = 'px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20 active:scale-95';
           speakBtn.innerHTML = '<span>🎙️</span> பேசுக (Speak Now)';
@@ -406,172 +844,318 @@
       }
     }
 
-    // Web Speech Recognition (STT) + Server Audio Fallback
-    let currentRecInstance = null;
-    let audioCtx = null;
-    let mediaStream = null;
-    let scriptNode = null;
-    let audioBuffers = [];
-    let micSampleRate = 44100;
-    let recognitionActive = false;
+    // =========================================================================
+    // 3. GEMINI MULTIMODAL LIVE API CLIENT & AUDIO RECORDER
+    // (Follows https://ai.google.dev/gemini-api/docs/live-api)
+    // =========================================================================
+    let geminiLiveWs = null;
+    let geminiLiveEnabled = true;
+    let geminiLiveActive = false;
+    let geminiLiveAudioContext = null;
+    let micAudioContext = null;
+    let micAudioStream = null;
+    let micAnalyser = null;
+    let micScriptProcessor = null;
+    let recordedAudioBuffers = [];
+    let micAnimFrame = null;
+    let speechSilenceTimer = null;
+    let lastRecognizedSpeech = '';
+    let hasWebSpeechErrored = false;
 
-    // Web Audio Unlock on any user click
-    function ensureAudioUnlocked() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }
-
-    function encodeWAV(samples, sampleRate) {
-      const buffer = new ArrayBuffer(44 + samples.length * 2);
-      const view = new DataView(buffer);
-      function writeStr(offset, str) {
-        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-      }
-      writeStr(0, 'RIFF');
-      view.setUint32(4, 36 + samples.length * 2, true);
-      writeStr(8, 'WAVE');
-      writeStr(12, 'fmt ');
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true); // PCM
-      view.setUint16(22, 1, true); // 1 channel
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, sampleRate * 2, true);
-      view.setUint16(32, 2, true);
-      view.setUint16(34, 16, true);
-      writeStr(36, 'data');
-      view.setUint32(40, samples.length * 2, true);
-      let offset = 44;
-      for (let i = 0; i < samples.length; i++) {
-        let s = Math.max(-1, Math.min(1, samples[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-        offset += 2;
-      }
-      return buffer;
-    }
-
-    function stopListeningTemporary(sendAudio = false) {
-      recognitionActive = false;
-      if (currentRecInstance) {
-        try { currentRecInstance.stop(); } catch(e){}
-      }
-      isListening = false;
-      setOrbState('idle');
-
-      if (scriptNode) { scriptNode.disconnect(); scriptNode = null; }
-
-      if (sendAudio && audioBuffers.length > 5) {
-        sendWAVToServer();
+    function toggleGeminiLiveMode() {
+      geminiLiveEnabled = !geminiLiveEnabled;
+      const lbl = document.getElementById('live-api-label');
+      const btn = document.getElementById('live-api-toggle-btn');
+      if (geminiLiveEnabled) {
+        if (lbl) lbl.innerText = 'Live API: Active';
+        if (btn) btn.className = 'px-3 py-1.5 rounded-xl bg-purple-950/80 border border-purple-500/40 text-purple-300 text-xs font-bold transition flex items-center gap-1.5 shadow-sm hover:bg-purple-900/80';
+        initGeminiLiveSession();
+      } else {
+        if (lbl) lbl.innerText = 'Live API: Off (Fallback)';
+        if (btn) btn.className = 'px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold transition flex items-center gap-1.5 shadow-sm hover:bg-slate-700';
+        closeGeminiLiveSession();
       }
     }
 
-    function sendWAVToServer() {
-      let totalLength = audioBuffers.reduce((acc, b) => acc + b.length, 0);
-      if (totalLength < 4000) {
-        audioBuffers = [];
+    async function initGeminiLiveSession() {
+      if (!geminiLiveEnabled) return;
+      try {
+        const res = await fetch('/api/v2/registration/kiosk/live-config');
+        const config = await res.json();
+        if (!config || !config.has_api_key || !config.ws_url) {
+          console.info("Gemini Live API: No API key or WS endpoint; using resilient fallback agent.");
+          return;
+        }
+
+        if (geminiLiveWs && geminiLiveWs.readyState === WebSocket.OPEN) {
+          return;
+        }
+
+        const ws = new WebSocket(config.ws_url);
+        ws.binaryType = "arraybuffer";
+
+        ws.onopen = () => {
+          console.info("Connected to Gemini Multimodal Live API WebSocket");
+          geminiLiveActive = true;
+          // Send setup handshake according to live-api spec
+          if (config.setup_message) {
+            ws.send(JSON.stringify(config.setup_message));
+          }
+          const lbl = document.getElementById('live-api-label');
+          if (lbl) lbl.innerText = 'Live API: Connected';
+        };
+
+        ws.onmessage = async (event) => {
+          try {
+            let msg;
+            if (typeof event.data === 'string') {
+              msg = JSON.parse(event.data);
+            } else {
+              // Binary data or raw text buffer
+              const decoder = new TextDecoder();
+              msg = JSON.parse(decoder.decode(event.data));
+            }
+
+            // Handle server turn content
+            if (msg.serverContent && msg.serverContent.modelTurn) {
+              const parts = msg.serverContent.modelTurn.parts || [];
+              for (const p of parts) {
+                // If model returns text parts
+                if (p.text) {
+                  const speechEl = document.getElementById('agent-speech');
+                  if (speechEl) speechEl.innerText = p.text;
+                }
+                // If model returns audio parts (base64 inlineData audio/pcm;rate=24000)
+                if (p.inlineData && p.inlineData.mimeType && p.inlineData.mimeType.startsWith('audio/pcm')) {
+                  playLiveApiPcmChunk(p.inlineData.data, 24000);
+                }
+              }
+            }
+
+            // Handle tool call (functionCall)
+            if (msg.toolCall && msg.toolCall.functionCalls) {
+              for (const fc of msg.toolCall.functionCalls) {
+                if (fc.name === 'register_visitor') {
+                  const args = fc.args || {};
+                  activeVisitorData.name = args.name;
+                  activeVisitorData.purpose = args.purpose;
+                  activeVisitorData.company = args.company;
+                  activeVisitorData.expected_duration_minutes = args.duration_minutes || 30;
+                  submitDirectCheckin();
+
+                  // Send functionResponse back to Live API
+                  if (geminiLiveWs && geminiLiveWs.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                      toolResponse: {
+                        functionResponses: [
+                          {
+                            response: { output: { success: true, message: "Visitor checked in successfully" } },
+                            id: fc.id
+                          }
+                        ]
+                      }
+                    }));
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            console.warn("Live API onmessage parse error:", err);
+          }
+        };
+
+        ws.onerror = (err) => {
+          console.warn("Gemini Live WebSocket error:", err);
+          geminiLiveActive = false;
+          const lbl = document.getElementById('live-api-label');
+          if (lbl) lbl.innerText = 'Live API: Fallback';
+        };
+
+        ws.onclose = () => {
+          geminiLiveActive = false;
+          const lbl = document.getElementById('live-api-label');
+          if (lbl) lbl.innerText = 'Live API: Ready';
+        };
+
+        geminiLiveWs = ws;
+      } catch (e) {
+        console.warn("initGeminiLiveSession error:", e);
+      }
+    }
+
+    function closeGeminiLiveSession() {
+      if (geminiLiveWs) {
+        try { geminiLiveWs.close(); } catch(e){}
+        geminiLiveWs = null;
+      }
+      geminiLiveActive = false;
+    }
+
+    function playLiveApiPcmChunk(base64Pcm, sampleRate = 24000) {
+      try {
+        if (!geminiLiveAudioContext) {
+          geminiLiveAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: sampleRate });
+        }
+        const binaryStr = atob(base64Pcm);
+        const len = binaryStr.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+        const int16Array = new Int16Array(bytes.buffer);
+        const float32Array = new Float32Array(int16Array.length);
+        for (let i = 0; i < int16Array.length; i++) {
+          float32Array[i] = int16Array[i] / 32768.0;
+        }
+
+        const buffer = geminiLiveAudioContext.createBuffer(1, float32Array.length, sampleRate);
+        buffer.getChannelData(0).set(float32Array);
+        const source = geminiLiveAudioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(geminiLiveAudioContext.destination);
+        source.start();
+      } catch (e) {
+        console.warn("playLiveApiPcmChunk error:", e);
+      }
+    }
+
+    function updateLiveAudioVisualizer() {
+      if (!isListening || !micAnalyser) {
+        document.querySelectorAll('.v-bar').forEach((bar) => {
+          bar.style.height = '4px';
+          bar.className = 'v-bar w-1 bg-slate-600 rounded-full transition-all';
+        });
+        const dot = document.getElementById('speech-indicator-dot');
+        if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
         return;
       }
-      let merged = new Float32Array(totalLength);
-      let offset = 0;
-      for (let b of audioBuffers) {
-        merged.set(b, offset);
-        offset += b.length;
+
+      const dataArray = new Uint8Array(micAnalyser.frequencyBinCount);
+      micAnalyser.getByteFrequencyData(dataArray);
+
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
       }
-      audioBuffers = [];
+      const avg = sum / (dataArray.length || 1);
 
-      const wavBytes = encodeWAV(merged, micSampleRate);
-      const blob = new Blob([wavBytes], { type: 'audio/wav' });
-
-      document.getElementById('user-heard-text').innerText = '⏳ குரல் பகுப்பாய்வு செய்யப்படுகிறது (Processing voice)...';
-
-      const formData = new FormData();
-      formData.append('audio', blob, 'recording.wav');
-      formData.append('language', currentLang);
-
-      fetch('/api/v2/registration/kiosk/voice-audio', {
-        method: 'POST',
-        body: formData
-      })
-      .then(r => r.json())
-      .then(data => {
-        const text = data.transcript || '';
-        if (text && text.trim().length > 1) {
-          document.getElementById('user-heard-text').innerText = `"${text}"`;
-          handleVisitorSpeech(text);
-        } else {
-          document.getElementById('user-heard-text').innerText = 'மீண்டும் பேசவும் அல்லது கீழேயுள்ள பட்டனைத் தொடவும்.';
-          // Re-enable listening
-          setTimeout(() => {
-            if (!isListening && convStep !== 'DONE') startListening();
-          }, 1000);
-        }
-      })
-      .catch(e => {
-        console.warn("Server audio transcription error:", e);
-      });
-    }
-
-    async function initMicStream() {
-      if (!mediaStream) {
-        try {
-          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch(err) {
-          console.warn("Mic access error:", err);
-          document.getElementById('user-heard-text').innerText = "⚠️ மைக்ரோஃபோன் பர்மிஷன் தேவை (Microphone permission needed).";
-          return false;
-        }
+      const bars = document.querySelectorAll('.v-bar');
+      const dot = document.getElementById('speech-indicator-dot');
+      if (avg > 10) {
+        if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+        bars.forEach((bar, idx) => {
+          const val = dataArray[idx * 2] || avg;
+          const h = Math.min(16, Math.max(3, Math.round(val / 9)));
+          bar.style.height = `${h}px`;
+          bar.className = 'v-bar w-1 bg-emerald-400 rounded-full transition-all duration-75';
+        });
+      } else {
+        if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-400';
+        bars.forEach((bar) => {
+          bar.style.height = '4px';
+          bar.className = 'v-bar w-1 bg-slate-600 rounded-full transition-all';
+        });
       }
-      return true;
+
+      micAnimFrame = requestAnimationFrame(updateLiveAudioVisualizer);
     }
 
     async function startListening() {
-      ensureAudioUnlocked();
+      unlockAudioContext();
       if (currentTtsAudio) {
         try { currentTtsAudio.pause(); currentTtsAudio = null; } catch(e){}
       }
 
-      const hasMic = await initMicStream();
-      if (!hasMic) return;
-
       isListening = true;
       recognitionActive = true;
-      setOrbState('listening');
-      document.getElementById('user-heard-text').innerText = currentLang === 'ta-IN' 
-        ? '🔴 மைக் ஆன்: பேசவும்... (Listening...)' 
-        : '🔴 Mic Active: Speak now...';
+      lastRecognizedSpeech = '';
+      hasWebSpeechErrored = false;
+      setAgentState('listening');
 
-      // 1. AudioContext buffer recording for server STT
-      audioBuffers = [];
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') await audioCtx.resume();
-        micSampleRate = audioCtx.sampleRate || 44100;
-
-        const source = audioCtx.createMediaStreamSource(mediaStream);
-        scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
-        scriptNode.onaudioprocess = (e) => {
-          if (!isListening) return;
-          const channel = e.inputBuffer.getChannelData(0);
-          audioBuffers.push(new Float32Array(channel));
-        };
-        source.connect(scriptNode);
-        scriptNode.connect(audioCtx.destination);
-      } catch(e) {
-        console.warn("AudioContext recording init error:", e);
+      const heardBox = document.getElementById('user-heard-text');
+      if (heardBox) {
+        heardBox.innerText = currentLang === 'ta-IN'
+          ? '🔴 மைக் ஆன்: பேசுங்கள் (Listening... speak now)'
+          : '🔴 Mic Active: Speak now...';
+      }
+      const titleLbl = document.getElementById('speech-title-label');
+      if (titleLbl) {
+        titleLbl.innerText = currentLang === 'ta-IN' ? '🎙️ நீங்கள் பேசுவது (Live Subtitles):' : '🎙️ You Are Speaking:';
       }
 
-      // 2. Browser WebSpeech API
+      // 1. HARDWARE MIC STREAM & REAL-TIME AUDIO ANALYSER (Guaranteed visual & fallback audio)
+      recordedAudioBuffers = [];
+      try {
+        if (!micAudioStream || !micAudioStream.active) {
+          micAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        }
+        if (!micAudioContext || micAudioContext.state === 'closed') {
+          micAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        }
+        if (micAudioContext.state === 'suspended') {
+          await micAudioContext.resume();
+        }
+
+        const sourceNode = micAudioContext.createMediaStreamSource(micAudioStream);
+        micAnalyser = micAudioContext.createAnalyser();
+        micAnalyser.fftSize = 64;
+        sourceNode.connect(micAnalyser);
+
+        // Capture raw PCM audio buffers and stream to Gemini Live API over WebSocket
+        micScriptProcessor = micAudioContext.createScriptProcessor(4096, 1, 1);
+        micScriptProcessor.onaudioprocess = (e) => {
+          if (!isListening) return;
+          const channel = e.inputBuffer.getChannelData(0);
+          const chunk = new Float32Array(channel);
+          recordedAudioBuffers.push(chunk);
+
+          // Stream to Gemini Live WebSocket if connected (PCM 16-bit 16kHz)
+          if (geminiLiveActive && geminiLiveWs && geminiLiveWs.readyState === WebSocket.OPEN) {
+            try {
+              const int16 = new Int16Array(chunk.length);
+              for (let i = 0; i < chunk.length; i++) {
+                let s = Math.max(-1, Math.min(1, chunk[i]));
+                int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+              }
+              const bytes = new Uint8Array(int16.buffer);
+              let binary = '';
+              for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+              const base64Data = btoa(binary);
+
+              geminiLiveWs.send(JSON.stringify({
+                realtimeInput: {
+                  mediaChunks: [
+                    {
+                      mimeType: "audio/pcm;rate=16000",
+                      data: base64Data
+                    }
+                  ]
+                }
+              }));
+            } catch (liveSendErr) {
+              // Ignore streaming transient errors
+            }
+          }
+        };
+        sourceNode.connect(micScriptProcessor);
+        micScriptProcessor.connect(micAudioContext.destination);
+
+        // Start visualizer animation loop
+        updateLiveAudioVisualizer();
+      } catch (micErr) {
+        console.warn("Direct microphone capture error:", micErr);
+      }
+
+      // 2. WEB SPEECH RECOGNITION (Instant streaming subtitles without rapid crash-loop)
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
         try {
           if (currentRecInstance) {
             try { currentRecInstance.abort(); } catch(e){}
+            currentRecInstance = null;
           }
+
           const rec = new SpeechRecognition();
-          rec.continuous = true;
+          rec.continuous = false; // single utterance prevents Chrome network socket thrashing
           rec.interimResults = true;
           rec.lang = currentLang;
 
@@ -585,103 +1169,182 @@
                 interimTranscript += event.results[i][0].transcript;
               }
             }
-            if (interimTranscript) {
-              document.getElementById('user-heard-text').innerText = `"${interimTranscript}"`;
+
+            if (interimTranscript && heardBox) {
+              heardBox.innerText = `"${interimTranscript}..."`;
             }
-            if (finalTranscript.trim().length > 1) {
-              document.getElementById('user-heard-text').innerText = `"${finalTranscript.trim()}"`;
+
+            if (finalTranscript.trim().length > 0) {
+              lastRecognizedSpeech = finalTranscript.trim();
+              if (heardBox) heardBox.innerText = `"${lastRecognizedSpeech}"`;
               stopListeningTemporary(false);
-              handleVisitorSpeech(finalTranscript.trim());
+              handleVisitorSpokenInput(lastRecognizedSpeech);
             }
           };
 
           rec.onerror = (e) => {
-            console.warn("Speech recognition error:", e.error);
-            if (e.error === 'no-speech' && recognitionActive) {
-              // keep alive
+            console.warn("Web Speech error:", e.error);
+            if (e.error !== 'no-speech') {
+              hasWebSpeechErrored = true;
+              recognitionActive = false; // Stop thrashing on network/permission error
             }
           };
 
           rec.onend = () => {
-            if (recognitionActive && isListening) {
-              try { rec.start(); } catch(e){}
+            if (recognitionActive && isListening && !hasWebSpeechErrored && !lastRecognizedSpeech) {
+              setTimeout(() => {
+                if (recognitionActive && isListening && !lastRecognizedSpeech) {
+                  try { rec.start(); } catch(e){}
+                }
+              }, 400);
             }
           };
 
           currentRecInstance = rec;
           rec.start();
-        } catch(e){
-          console.warn("SpeechRecognition start exception:", e);
+        } catch(e) {
+          console.warn("SpeechRecognition init error:", e);
+        }
+      }
+
+      // 3. Silence timeout: After 6 seconds, wrap up automatically
+      if (speechSilenceTimer) clearTimeout(speechSilenceTimer);
+      speechSilenceTimer = setTimeout(() => {
+        if (isListening) {
+          stopListeningTemporary(true);
+        }
+      }, 6500);
+    }
+
+    async function stopListeningTemporary(processRecordedAudio = true) {
+      if (!isListening) return;
+      isListening = false;
+      recognitionActive = false;
+      setAgentState('idle');
+
+      if (speechSilenceTimer) {
+        clearTimeout(speechSilenceTimer);
+        speechSilenceTimer = null;
+      }
+
+      // Stop speech recognition instance cleanly
+      if (currentRecInstance) {
+        try { currentRecInstance.stop(); } catch(e){}
+        currentRecInstance = null;
+      }
+
+      // Stop visualizer animation
+      if (micAnimFrame) {
+        cancelAnimationFrame(micAnimFrame);
+        micAnimFrame = null;
+      }
+      updateLiveAudioVisualizer();
+
+      // Disconnect script processor
+      if (micScriptProcessor) {
+        try { micScriptProcessor.disconnect(); } catch(e){}
+        micScriptProcessor = null;
+      }
+
+      // If Web Speech already produced final text, we already handled it!
+      if (lastRecognizedSpeech) return;
+
+      // FALLBACK TO SERVER STT: If Web Speech produced no text, use recorded audio WAV
+      if (processRecordedAudio && recordedAudioBuffers.length > 4) {
+        const wavBlob = buildWavFromRecordedBuffers(recordedAudioBuffers, 16000);
+        if (wavBlob && wavBlob.size > 2000) {
+          const heardBox = document.getElementById('user-heard-text');
+          if (heardBox) heardBox.innerText = '⏳ குரல் பதிவு செயலாக்கப்படுகிறது (Processing audio)...';
+          sendRecordedAudioToServer(wavBlob);
         }
       }
     }
 
-    // Conversational Step State Machine
-    let convStep = 'IDLE';
+    // Convert recorded PCM float32 buffers to standard 16kHz 16-bit Mono WAV
+    function buildWavFromRecordedBuffers(buffers, sampleRate) {
+      let totalLength = buffers.reduce((acc, b) => acc + b.length, 0);
+      let samples = new Float32Array(totalLength);
+      let offset = 0;
+      for (let b of buffers) {
+        samples.set(b, offset);
+        offset += b.length;
+      }
 
-    function updateStepUI() {
-      const chipsName = document.getElementById('chips-name');
-      const chipsPurpose = document.getElementById('chips-purpose');
-      const chipsStep = document.getElementById('chips-step');
+      const buffer = new ArrayBuffer(44 + samples.length * 2);
+      const view = new DataView(buffer);
 
-      if (convStep === 'ASK_NAME' || convStep === 'LISTEN_NAME') {
-        chipsName.classList.remove('hidden');
-        chipsPurpose.classList.add('hidden');
-        chipsStep.innerText = 'படி 1: பெயர் (Step 1)';
-      } else if (convStep === 'ASK_PURPOSE' || convStep === 'LISTEN_PURPOSE') {
-        chipsName.classList.add('hidden');
-        chipsPurpose.classList.remove('hidden');
-        chipsStep.innerText = 'படி 2: நோக்கம் & நேரம் (Step 2)';
+      function writeStr(view, off, str) {
+        for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
+      }
+
+      writeStr(view, 0, 'RIFF');
+      view.setUint32(4, 36 + samples.length * 2, true);
+      writeStr(view, 8, 'WAVE');
+      writeStr(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM format
+      view.setUint16(22, 1, true); // Mono
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true); // 16-bit
+      writeStr(view, 36, 'data');
+      view.setUint32(40, samples.length * 2, true);
+
+      // Convert Float32 to 16-bit PCM
+      let pcmOffset = 44;
+      for (let i = 0; i < samples.length; i++, pcmOffset += 2) {
+        let s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(pcmOffset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      }
+
+      return new Blob([view], { type: 'audio/wav' });
+    }
+
+    async function sendRecordedAudioToServer(wavBlob) {
+      try {
+        const formData = new FormData();
+        formData.append('audio', wavBlob, 'kiosk_voice.wav');
+        formData.append('language', currentLang);
+        formData.append('existing_data', JSON.stringify(activeVisitorData));
+
+        const res = await fetch('/api/v2/registration/kiosk/voice-audio', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        const transcript = data.transcript || '';
+
+        const heardBox = document.getElementById('user-heard-text');
+        if (transcript) {
+          if (heardBox) heardBox.innerText = `"${transcript}"`;
+          handleVisitorSpokenInput(transcript, data);
+        } else {
+          if (heardBox) heardBox.innerText = currentLang === 'ta-IN' 
+            ? '⚠️ குரல் தெளிவாகக் கேட்கவில்லை. மீண்டும் பேசவும் அல்லது கீழே எழுதவும்.' 
+            : '⚠️ Could not hear clearly. Please speak again or type below.';
+        }
+      } catch (err) {
+        console.error("Server audio transcription error:", err);
       }
     }
 
-    function selectQuickName(name) {
-      document.getElementById('v-name').value = name;
-      convStep = 'ASK_PURPOSE';
-      updateStepUI();
-      const askPurpose = currentLang === 'ta-IN'
-        ? `நன்றி ${name}! நீங்கள் எதற்காக இங்கே வந்திருக்கிறீர்கள்?`
-        : `Thank you ${name}! What is the purpose of your visit?`;
-      speakText(askPurpose, () => {
-        convStep = 'LISTEN_PURPOSE';
-        startListening();
-      });
-    }
+    function handleManualTextSubmit(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('manual-speech-input');
+      if (!input || !input.value.trim()) return;
+      const text = input.value.trim();
+      input.value = '';
 
-    function selectQuickPurpose(purpose, company, duration) {
-      document.getElementById('v-purpose').value = purpose;
-      if (company) document.getElementById('v-company').value = company;
-      setDuration(duration);
-
-      convStep = 'TAKE_PHOTO';
-      const photoMsg = currentLang === 'ta-IN'
-        ? "நன்றி நீங்கள் பதிவு செய்ததற்கு. ஒரே நிமிடம் உங்களை படம் பிடித்துக் கொள்கிறோம். கேமராவைப் பார்க்கவும்."
-        : "Thank you for registering. Please hold on, capturing your photo now.";
-      
-      speakText(photoMsg, () => {
-        openAndAutoSnapPhoto();
-      });
-    }
-
-    function startConversation() {
-      convStep = 'ASK_NAME';
-      updateStepUI();
-      const prompt = currentLang === 'ta-IN' 
-        ? "வணக்கம்! உங்களது பெயர் என்ன?" 
-        : "Welcome! What is your name?";
-      speakText(prompt, () => {
-        convStep = 'LISTEN_NAME';
-        startListening();
-      });
-    }
-
-    function manualStartVoice() {
-      startConversation();
+      const heardBox = document.getElementById('user-heard-text');
+      if (heardBox) heardBox.innerText = `"${text}"`;
+      stopListeningTemporary(false);
+      handleVisitorSpokenInput(text);
     }
 
     function triggerVoiceCheck() {
       if (convStep === 'IDLE' || convStep === 'DONE') {
-        startConversation();
+        startConversationManual();
       } else {
         if (isListening) {
           stopListeningTemporary(true);
@@ -691,150 +1354,348 @@
       }
     }
 
-    function testSpokenInput(phrase) {
-      document.getElementById('user-heard-text').innerText = `"${phrase}"`;
-      handleVisitorSpeech(phrase);
+    function startConversationManual() {
+      handleNewHumanDetected();
     }
 
-    // Turn-by-Turn Speech Handler
-    async function handleVisitorSpeech(transcript) {
+    // =========================================================================
+    // 4. ADAPTIVE MULTI-TURN AI CONVERSATION (Missing Data Questions + Adoption)
+    // =========================================================================
+    async function handleVisitorSpokenInput(transcript, preParsedData = null) {
       if (!transcript || transcript.trim().length === 0) return;
 
+      // Update on-screen Live Speech Card
+      const dot = document.getElementById('speech-indicator-dot');
+      if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+      const titleLbl = document.getElementById('speech-title-label');
+      if (titleLbl) titleLbl.innerText = currentLang === 'ta-IN' ? '✅ நீங்கள் கூறியது (Recognized):' : '✅ You Said:';
+      const heardBox = document.getElementById('user-heard-text');
+      if (heardBox) heardBox.innerText = `"${transcript}"`;
+
+      // 1. Show user's utterance on right conversational feed
+      appendConvoBubble('user', transcript);
+
+      const procInd = document.getElementById('process-state-indicator');
+      if (procInd) procInd.innerText = 'Analyzing...';
+
       try {
-        const res = await fetch('/api/v2/registration/kiosk/voice-parse', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: transcript, language: currentLang })
-        });
-        const data = await res.json();
-        const extracted = data.extracted || {};
-
-        if (convStep === 'LISTEN_NAME' || convStep === 'ASK_NAME' || !document.getElementById('v-name').value) {
-          const name = extracted.name || transcript.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").trim();
-          document.getElementById('v-name').value = name;
-
-          convStep = 'ASK_PURPOSE';
-          updateStepUI();
-          const askPurpose = currentLang === 'ta-IN'
-            ? `நன்றி ${name}! நீங்கள் எதற்காக இங்கே வந்திருக்கிறீர்கள்?`
-            : `Thank you ${name}! What is the purpose of your visit?`;
-          
-          speakText(askPurpose, () => {
-            convStep = 'LISTEN_PURPOSE';
-            startListening();
+        let data = preParsedData;
+        if (!data || !data.extracted) {
+          const res = await fetch('/api/v2/registration/kiosk/voice-parse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              transcript: transcript,
+              language: currentLang,
+              existing_data: activeVisitorData
+            })
           });
+          data = await res.json();
+        }
+        activeVisitorData = data.extracted || {};
+        updateVisitorCards(activeVisitorData);
 
-        } else if (convStep === 'LISTEN_PURPOSE' || convStep === 'ASK_PURPOSE') {
-          if (extracted.company) document.getElementById('v-company').value = extracted.company;
-          if (extracted.purpose) document.getElementById('v-purpose').value = extracted.purpose;
-          if (extracted.phone) document.getElementById('v-phone').value = extracted.phone;
-          if (extracted.expected_duration_minutes) {
-            setDuration(extracted.expected_duration_minutes);
+        // Adopt newly extracted fields into hidden form inputs in real time
+        if (activeVisitorData.name) document.getElementById('v-name').value = activeVisitorData.name;
+        if (activeVisitorData.company) document.getElementById('v-company').value = activeVisitorData.company;
+        if (activeVisitorData.purpose) document.getElementById('v-purpose').value = activeVisitorData.purpose;
+        if (activeVisitorData.phone) document.getElementById('v-phone').value = activeVisitorData.phone;
+        if (activeVisitorData.expected_duration_minutes) setDuration(activeVisitorData.expected_duration_minutes);
+
+        const serverIntent = data && data.confirmation_intent;
+        const isPos = serverIntent === 'positive' || isPositiveIntent(transcript);
+        const isNeg = serverIntent === 'negative' || isNegativeIntent(transcript);
+
+        // CASE 1: CONFIRM ENTRY for existing registered visitor at entry gate
+        // Must ask for purpose and duration each and every time!
+        if (convStep === 'CONFIRM_ENTRY') {
+          if (isNeg) {
+            convStep = 'DONE';
+            autoTriggerCooldown = true;
+            if (procInd) procInd.innerText = 'Cancelled';
+            const cancelMsg = currentLang === 'ta-IN'
+              ? 'சரி, உங்கள் வருகை பதிவு செய்யப்படவில்லை.'
+              : 'Okay, your entry was cancelled.';
+            appendConvoBubble('ai', cancelMsg);
+            speakText(cancelMsg, () => setTimeout(resetKiosk, 3500));
+            return;
           }
 
-          convStep = 'TAKE_PHOTO';
-          const photoMsg = currentLang === 'ta-IN'
-            ? "நன்றி நீங்கள் பதிவு செய்ததற்கு. ஒரே நிமிடம் உங்களை படம் பிடித்துக் கொள்கிறோம். கேமராவைப் பார்க்கவும்."
-            : "Thank you for registering. Please hold on, capturing your photo now.";
-          
-          speakText(photoMsg, () => {
-            openAndAutoSnapPhoto();
-          });
+          const hasPurpose = Boolean(activeVisitorData.purpose && activeVisitorData.purpose !== 'Visitor') || Boolean(activeVisitorData.company);
+          const hasDuration = Boolean(selectedDuration || activeVisitorData.expected_duration_minutes);
+          const vName = activeVisitorData.name || (recognizedVisitor && recognizedVisitor.full_name) || '';
 
-        } else {
-          if (extracted.name) document.getElementById('v-name').value = extracted.name;
-          if (extracted.company) document.getElementById('v-company').value = extracted.company;
-          if (extracted.purpose) document.getElementById('v-purpose').value = extracted.purpose;
-          if (extracted.phone) document.getElementById('v-phone').value = extracted.phone;
-          if (extracted.expected_duration_minutes) setDuration(extracted.expected_duration_minutes);
+          if (!hasPurpose && !hasDuration) {
+            if (procInd) procInd.innerText = 'Listening...';
+            const clarifyMsg = currentLang === 'ta-IN'
+              ? `சரி ${vName}! நீங்கள் இன்று எதற்காக வந்திருக்கிறீர்கள் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?`
+              : `Alright ${vName}! What is your purpose of visit today and how long will you stay?`;
+            appendConvoBubble('ai', clarifyMsg);
+            speakText(clarifyMsg, () => startListening());
+            return;
+          } else if (!hasPurpose) {
+            if (procInd) procInd.innerText = 'Listening...';
+            const clarifyMsg = currentLang === 'ta-IN'
+              ? `சரி ${vName}! நீங்கள் இன்று எதற்காக வந்திருக்கிறீர்கள்? டெலிவரி, வேலை அல்லது விருந்தினரா?`
+              : `Alright ${vName}! What is your purpose of visit today? Delivery, work, or guest?`;
+            appendConvoBubble('ai', clarifyMsg);
+            speakText(clarifyMsg, () => startListening());
+            return;
+          } else if (!hasDuration) {
+            if (procInd) procInd.innerText = 'Listening...';
+            const clarifyMsg = currentLang === 'ta-IN'
+              ? `சரி ${vName}! நீங்கள் வளாகத்தில் எவ்வளவு நேரம் இருப்பீர்கள்? 10 நிமிடமா, 30 நிமிடமா, அல்லது 1 மணி நேரமா?`
+              : `Alright ${vName}! How long will you stay inside? 10 minutes, 30 minutes, or 1 hour?`;
+            appendConvoBubble('ai', clarifyMsg);
+            speakText(clarifyMsg, () => startListening());
+            return;
+          } else {
+            // BOTH PURPOSE AND DURATION PROVIDED FOR THIS VISIT!
+            convStep = 'DONE';
+            autoTriggerCooldown = true;
+            if (procInd) procInd.innerText = 'Approved';
+            const dur = selectedDuration || activeVisitorData.expected_duration_minutes || 30;
+            submitQuickCheckin(dur);
+            return;
+          }
         }
 
+        // CASE 2: CONFIRM EXIT for existing registered visitor with active entry at exit gate
+        if (convStep === 'CONFIRM_EXIT') {
+          if (isPos && !isNeg) {
+            convStep = 'DONE';
+            autoTriggerCooldown = true;
+            if (procInd) procInd.innerText = 'Checked Out';
+            submitQuickCheckin(30);
+            return;
+          } else if (isNeg) {
+            convStep = 'DONE';
+            autoTriggerCooldown = true;
+            if (procInd) procInd.innerText = 'Cancelled';
+            const cancelMsg = currentLang === 'ta-IN'
+              ? 'சரி, வெளியேறுதல் ரத்து செய்யப்பட்டது.'
+              : 'Okay, exit was cancelled.';
+            appendConvoBubble('ai', cancelMsg);
+            speakText(cancelMsg, () => setTimeout(resetKiosk, 3500));
+            return;
+          } else {
+            if (procInd) procInd.innerText = 'Listening...';
+            const clarifyMsg = currentLang === 'ta-IN'
+              ? 'தயவுசெய்து உறுதிப்படுத்தவும்: நீங்கள் இப்போது வெளியேறுகிறீர்களா? ஆம் அல்லது இல்லை என்று கூறவும்.'
+              : 'Please confirm: are you leaving now? Please say yes or no.';
+            appendConvoBubble('ai', clarifyMsg);
+            speakText(clarifyMsg, () => startListening());
+            return;
+          }
+        }
+
+        // CASE 3: NEW VISITOR DIALOGUE (Entry Gate)
+        const replyMsg = currentLang === 'ta-IN' ? data.reply_tamil : data.reply_english;
+        appendConvoBubble('ai', replyMsg);
+        if (procInd) procInd.innerText = data.is_complete ? 'Complete' : 'Listening...';
+
+        if (data.is_complete) {
+          // ALL ESSENTIAL DATA COLLECTED!
+          submitDirectCheckin();
+        } else {
+          // DATA NOT ENOUGH -> AI ASKS THE NEXT FOLLOW-UP QUESTION ADAPTIVELY!
+          speakText(replyMsg, () => {
+            startListening();
+          });
+        }
       } catch (err) {
-        console.error("Speech parse error:", err);
+        console.error("Conversation error:", err);
+        if (procInd) procInd.innerText = 'Error';
       }
     }
 
-    // Modal & Automatic Photo Capture
-    let modalCameraStream = null;
+    // Quick Tap Fallback
+    function selectDurationCheckin(mins) {
+      setDuration(mins);
+      if (recognizedVisitor && recognizedVisitor.id) {
+        submitQuickCheckin(mins);
+      } else {
+        if (!activeVisitorData.name) {
+          activeVisitorData.name = document.getElementById('v-name').value.trim();
+        }
+        if (!activeVisitorData.purpose) {
+          activeVisitorData.purpose = document.getElementById('v-purpose').value;
+        }
+        submitDirectCheckin();
+      }
+    }
 
-    async function openAndAutoSnapPhoto() {
-      const modal = document.getElementById('photo-modal');
-      modal.classList.remove('hidden');
+    function selectQuickPurpose(purpose, company, duration) {
+      document.getElementById('v-purpose').value = purpose;
+      activeVisitorData.purpose = purpose;
+      if (company) {
+        document.getElementById('v-company').value = company;
+        activeVisitorData.company = company;
+      }
+      setDuration(duration);
+      if (recognizedVisitor && recognizedVisitor.id) {
+        submitQuickCheckin(duration);
+      } else {
+        if (!activeVisitorData.name) {
+          activeVisitorData.name = document.getElementById('v-name').value.trim();
+        }
+        if (!activeVisitorData.name) {
+          // Ask for name
+          speakText("சரி! உங்கள் பெயர் என்ன என்று கூறுங்கள்?", () => startListening());
+        } else {
+          submitDirectCheckin();
+        }
+      }
+    }
 
-      const submitBtn = document.getElementById('capture-submit-btn');
-      submitBtn.innerText = '📷 3 வினாடியில் படம் பிடிக்கப்படும்...';
+    // =========================================================================
+    // 5. BIG GREEN TICK MARK MODAL & GATE SUBMISSION
+    // =========================================================================
+    function showApprovedTickModal() {
+      const modal = document.getElementById('approved-tick-modal');
+      if (modal) modal.classList.remove('hidden');
+
+      const badge = document.getElementById('entry-badge');
+      if (badge) {
+        badge.innerText = 'APPROVED (அனுமதிக்கப்பட்டது)';
+        badge.className = 'px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-900 text-emerald-300 border border-emerald-500/40 animate-pulse';
+      }
+    }
+
+    function closeApprovedTickModal() {
+      const modal = document.getElementById('approved-tick-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // Allow closing modal via Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeApprovedTickModal();
+    });
+
+    // Quick Check-in for Recognized Returning Visitors
+    async function submitQuickCheckin(durationMins) {
+      if (!recognizedVisitor || !recognizedVisitor.id) {
+        submitDirectCheckin();
+        return;
+      }
+
+      convStep = 'DONE';
+      autoTriggerCooldown = true;
+
+      const btn = document.getElementById('submit-btn');
+      if (btn) btn.disabled = true;
 
       try {
-        modalCameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
+        const res = await fetch('/api/v2/registration/kiosk/quick-checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            visitor_id: recognizedVisitor.id,
+            expected_duration_minutes: durationMins,
+            gate_mode: currentGateMode,
+            purpose: document.getElementById('v-purpose').value,
+            company: document.getElementById('v-company').value
+          })
         });
-        const videoElem = document.getElementById('kiosk-cam-modal');
-        videoElem.srcObject = modalCameraStream;
+        const data = await res.json();
 
-        // Auto snapshot after 2.5 seconds
-        setTimeout(() => {
-          captureAndSubmit();
-        }, 2500);
-
+        if (res.ok) {
+          showApprovedTickModal();
+          if (data.status === 'CHECKED_OUT') {
+            // EXIT confirmed — use exact required Tamil message
+            const outMsg = data.reply_tamil || data.message || 'நன்றி இன்று வந்ததற்கு. உங்களது எக்ஸிட் ரெக்கார்ட் செய்யப்பட்டது.';
+            updateApprovedModal('வெளியேறுதல் பதிவு செய்யப்பட்டது', 'நன்றி! நல்ல நாள் ஆக அமையட்டும்');
+            appendConvoBubble('ai', outMsg);
+            speakText(outMsg);
+          } else {
+            // ENTRY confirmed
+            let durStr;
+            if (durationMins >= 1440) {
+              const d = Math.round(durationMins / 1440);
+              durStr = `${d} நாட்கள்`;
+            } else if (durationMins >= 60) {
+              durStr = `${Math.round(durationMins / 60)} மணி நேரம்`;
+            } else {
+              durStr = `${durationMins} நிமிடங்கள்`;
+            }
+            const vName = (recognizedVisitor && recognizedVisitor.full_name) || (activeVisitorData && activeVisitorData.name) || '';
+            const entryMsg = data.reply_tamil || (currentLang === 'ta-IN'
+              ? `சரி ${vName}! உங்கள் வருகை ${durStr} வரை பதிவு செய்யப்பட்டுவிட்டது. நீங்கள் உள்ளே போகலாம்!`
+              : `Alright ${vName}! Your entry is registered for ${durStr}. You may proceed inside!`);
+            appendConvoBubble('ai', entryMsg);
+            speakText(entryMsg);
+          }
+          setTimeout(resetKiosk, 5000);
+        } else {
+          // Error — speak server message (duplicate entry 409, not-found 404, etc.)
+          const errMsg = data.reply_tamil || data.error || (currentGateMode === 'exit' ? 'வெளியேறுதல் பதிவு செய்ய முடியவில்லை.' : 'செக்-இன் செய்ய முடியவில்லை.');
+          const modal = document.getElementById('approved-tick-modal');
+          if (modal) modal.classList.add('hidden');
+          if (btn) btn.disabled = false;
+          appendConvoBubble('ai', errMsg);
+          speakText(errMsg);
+          // 409 duplicate entry: give extra time to read the message
+          setTimeout(resetKiosk, res.status === 409 ? 7000 : 5000);
+        }
       } catch (err) {
-        console.warn("Camera could not be accessed:", err);
-        // Fallback without camera
-        setTimeout(() => {
-          closePhotoCaptureModal();
-          submitCheckin(null);
-        }, 2000);
+        console.error('Quick checkin network error:', err);
+        const modal = document.getElementById('approved-tick-modal');
+        if (modal) modal.classList.add('hidden');
+        setTimeout(resetKiosk, 4000);
       }
     }
 
-    function openPhotoCaptureStep() {
-      openAndAutoSnapPhoto();
-    }
+    // Direct Check-in — for NEW visitors on ENTRY screen only (phone + name known)
+    // For RECOGNIZED visitors on EXIT screen, use submitQuickCheckin(duration) instead.
+    async function submitDirectCheckin() {
+      convStep = 'DONE';
+      autoTriggerCooldown = true;
 
-    function closePhotoCaptureModal() {
-      const modal = document.getElementById('photo-modal');
-      modal.classList.add('hidden');
-      if (modalCameraStream) {
-        modalCameraStream.getTracks().forEach(track => track.stop());
-        modalCameraStream = null;
-      }
-    }
-
-    function captureAndSubmit() {
-      let photoB64 = null;
-      const videoElem = document.getElementById('kiosk-cam-modal');
-      const canvas = document.getElementById('snapshot-canvas');
-
-      if (videoElem && videoElem.videoWidth) {
-        canvas.width = videoElem.videoWidth;
-        canvas.height = videoElem.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(videoElem, 0, 0, canvas.width, canvas.height);
-        photoB64 = canvas.toDataURL('image/jpeg', 0.85);
+      // If we have a recognized visitor_id and we're on EXIT screen, delegate to quick-checkin
+      if (currentGateMode === 'exit' && recognizedVisitor && recognizedVisitor.id) {
+        submitQuickCheckin(selectedDuration || 30);
+        return;
       }
 
-      closePhotoCaptureModal();
-      submitCheckin(photoB64);
-    }
+      const name = document.getElementById('v-name').value.trim() || activeVisitorData.name || 'Visitor';
+      const phone = document.getElementById('v-phone').value.trim() || activeVisitorData.phone || '';
+      const company = document.getElementById('v-company').value.trim() || activeVisitorData.company || '';
+      const purpose = document.getElementById('v-purpose').value || activeVisitorData.purpose || 'Visitor';
+      const photoB64 = grabCameraSnapshotBase64();
 
-    // Submit Check-In to Backend
-    async function submitCheckin(photoBase64 = null) {
-      const name = document.getElementById('v-name').value.trim() || 'Visitor';
-      const phone = document.getElementById('v-phone').value.trim();
-      const company = document.getElementById('v-company').value.trim();
-      const purpose = document.getElementById('v-purpose').value;
+      // Validate required fields for ENTRY
+      const finalDuration = selectedDuration || (activeVisitorData && activeVisitorData.expected_duration_minutes) || 0;
+      if (currentGateMode !== 'exit') {
+        const missing = [];
+        if (!name || name.toLowerCase() === 'visitor') missing.push('பெயர் (Name)');
+        if (phone.replace(/\D/g, '').length < 10) missing.push('தொலைபேசி எண் (Phone)');
+        if (!purpose || purpose === 'Visitor') missing.push('நோக்கம் (Purpose)');
+        if (finalDuration <= 0) missing.push('தங்கும் நேரம் (Duration)');
+        if (missing.length > 0) {
+          closeApprovedTickModal();
+          const missingMsg = currentLang === 'ta-IN'
+            ? `தயவுசெய்து இந்த விவரங்களைக் கூறவும்: ${missing.join(', ')}`
+            : `Please provide: ${missing.join(', ')}`;
+          appendConvoBubble('ai', missingMsg);
+          speakText(missingMsg, () => startListening());
+          convStep = 'NEW_VISITOR';
+          autoTriggerCooldown = false;
+          return;
+        }
+      }
+
+      const btn = document.getElementById('submit-btn');
+      if (btn) btn.disabled = true;
 
       const payload = {
         name: name,
         phone: phone,
         company: company,
         purpose: purpose,
-        expected_duration_minutes: selectedDuration,
-        photo_base64: photoBase64,
+        expected_duration_minutes: finalDuration || 30,
+        photo_base64: photoB64,
+        gate_mode: currentGateMode,
       };
-
-      const btn = document.getElementById('submit-btn');
-      btn.disabled = true;
-      btn.innerText = 'பதிவு செய்யப்படுகிறது...';
 
       try {
         const res = await fetch('/api/v2/registration/kiosk/voice-checkin', {
@@ -845,47 +1706,129 @@
         const data = await res.json();
 
         if (res.ok) {
-          convStep = 'DONE';
-          setOrbState('success');
-          const badge = document.getElementById('entry-badge');
-          if (data.event_type === 'EXIT') {
-            badge.innerText = 'CHECKED OUT (வெளியேறியது)';
-            badge.className = 'px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-blue-900/60 text-blue-300 border border-blue-500/40';
-            speakText("வெளியேறுதல் பதிவு செய்யப்பட்டது. நல்ல நாள் ஆக அமையட்டும்!");
-          } else {
-            badge.innerText = 'APPROVED (அனுமதிக்கப்பட்டது)';
-            badge.className = 'px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-900/60 text-emerald-300 border border-emerald-500/40';
-            speakText(`செக்-இன் வெற்றிகரமாக முடிந்தது! நீங்கள் ${selectedDuration} நிமிடங்கள் வரை வளாகத்தில் இருக்கலாம்.`);
+          showApprovedTickModal();
+          if (data.status === 'CHECKED_OUT') {
+            // EXIT confirmed — use exact required Tamil message from server
+            const outMsg = data.reply_tamil || data.message ||
+              'நன்றி இன்று வந்ததற்கு. உங்களது எக்ஸிட் ரெக்கார்ட் செய்யப்பட்டது.';
+            updateApprovedModal('வெளியேறுதல் பதிவு செய்யப்பட்டது', 'நன்றி! நல்ல நாள் ஆக அமையட்டும்');
+            speakText(outMsg);
+          } else if (data.status === 'CHECKED_IN') {
+            // ENTRY confirmed
+            const entryMsg = data.message || '';
+            const dur = selectedDuration < 60 ? `${selectedDuration} நிமிடங்கள்` : `${Math.round(selectedDuration / 60)} மணி நேரம்`;
+            const inMsg = currentLang === 'ta-IN'
+              ? `சரி ${name}! உங்கள் வருகை ${dur} வரை பதிவு செய்யப்பட்டுவிட்டது. நீங்கள் உள்ளே போகலாம்!`
+              : `Alright ${name}! Your entry is registered for ${selectedDuration} minutes. You may proceed inside!`;
+            speakText(inMsg);
           }
-
-          setTimeout(() => {
-            resetKiosk();
-          }, 6000);
         } else {
-          alert(data.error || 'Check-in failed');
+          // Error — speak exact server message (duplicate entry warning, not-found, etc.)
+          const errMsg = data.reply_tamil || data.error || '';
+          const modal = document.getElementById('approved-tick-modal');
+          if (modal) modal.classList.add('hidden');
+          if (btn) btn.disabled = false;
+          if (errMsg) {
+            appendConvoBubble('ai', errMsg);
+            speakText(errMsg);
+          }
+          // If duplicate entry (409), don't auto-reset — let guard read the message
+          if (res.status === 409) {
+            convStep = 'DONE';
+            setTimeout(resetKiosk, 6000);
+            return;
+          }
         }
-      } catch (err) {
-        alert('Network error. Check server.');
+      } catch (e) {
+        console.error('Check-in error:', e);
+        const modal = document.getElementById('approved-tick-modal');
+        if (modal) modal.classList.add('hidden');
       } finally {
-        btn.disabled = false;
-        btn.innerText = '📸 புகைப்படம் எடுத்து பதிவு செய்க (Photo & Check-in)';
+        setTimeout(resetKiosk, 5000);
       }
+    }
+
+    function updateApprovedModal(title, subtitle) {
+      const t = document.getElementById('approved-title');
+      const s = document.getElementById('approved-subtitle');
+      if (t) t.innerText = title;
+      if (s) s.innerText = subtitle;
     }
 
     function resetKiosk() {
       convStep = 'IDLE';
+      recognizedVisitor = null;
+      activeVisitorData = {};
+      document.getElementById('approved-tick-modal').classList.add('hidden');
+      document.getElementById('recognition-banner').classList.add('hidden');
+      document.getElementById('face-scan-status').innerText = '🔴 WAITING FOR VISITOR...';
+      document.getElementById('card-val-name').innerText = '—';
+      document.getElementById('card-val-purpose').innerText = '—';
+      document.getElementById('card-val-phone').innerText = '—';
+      document.getElementById('card-val-duration').innerText = '—';
+      const ind = document.getElementById('process-state-indicator');
+      if (ind) ind.innerText = 'Ready';
+
+      const feedContainer = document.getElementById('convo-feed-container');
+      if (feedContainer) {
+        feedContainer.innerHTML = `
+          <div class="flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-sm shrink-0">
+              🤖
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl rounded-tl-none p-3 text-xs text-slate-200 max-w-[85%] shadow-sm">
+              <p class="font-bold text-[10px] text-brand-400 uppercase tracking-wider mb-0.5">AI Security Agent</p>
+              <p id="convo-first-msg">${currentGateMode === 'exit' ? 'வணக்கம்! நீங்கள் வெளியேறுவதை பதிவு செய்ய கேமராவைப் பார்க்கவும்.' : 'வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?'}</p>
+            </div>
+          </div>
+        `;
+      }
+
       document.getElementById('v-name').value = '';
       document.getElementById('v-company').value = '';
       document.getElementById('v-phone').value = '';
-      document.getElementById('user-heard-text').innerText = '(பேசத் தொடங்க வட்டத்தைத் தொடவும் / அல்லது நேரடியாக பேசலாம்)';
-      document.getElementById('agent-speech').innerText = currentLang === 'ta-IN' 
-        ? 'வணக்கம்! உங்களது பெயர் என்ன?'
-        : 'Welcome! What is your name?';
-      setDuration(30);
-      setOrbState('idle');
+      document.getElementById('user-heard-text').innerText = '(முன்னால் நின்றாலே AI தானாகப் பேசும் / அல்லது "பேசுக" பட்டனைத் தொடவும்)';
+      const dot = document.getElementById('speech-indicator-dot');
+      if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+      const titleLbl = document.getElementById('speech-title-label');
+      if (titleLbl) titleLbl.innerText = currentLang === 'ta-IN' ? '🎙️ நீங்கள் பேசியது (Live Subtitles):' : '🎙️ Live Subtitles:';
+      const mInput = document.getElementById('manual-speech-input');
+      if (mInput) mInput.value = '';
+      
+      if (currentGateMode === 'exit') {
+        document.getElementById('agent-speech').innerText = currentLang === 'ta-IN'
+          ? 'வணக்கம்! நீங்கள் வெளியேறுவதை பதிவு செய்ய கேமராவைப் பார்க்கவும்.'
+          : 'Welcome! Please face the camera to record your exit.';
+      } else {
+        document.getElementById('agent-speech').innerText = currentLang === 'ta-IN' 
+          ? 'வணக்கம்! உங்கள் பெயர், வருகை நோக்கம், மொபைல் எண் மற்றும் எவ்வளவு நேரம் உள்ளே இருப்பீர்கள் என்று கூறுங்கள்?'
+          : 'Welcome! Please state your name, purpose of visit, mobile number, and how long you will stay inside.';
+      }
+      
+      setDuration(null);
+      setAgentState('idle');
       document.getElementById('entry-badge').innerText = 'Awaiting Input';
       document.getElementById('entry-badge').className = 'px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-slate-800 text-slate-400';
+      const btn = document.getElementById('submit-btn');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = currentGateMode === 'exit'
+          ? '<span>🚶</span> <span>வெளியேறுதல் பதிவு செய்க (Confirm Exit)</span>'
+          : '<span>📸</span> <span>செக்-இன் செய்க (Confirm Check-in)</span>';
+      }
+
+      // 4-second cooldown before auto-triggering on the next person
+      setTimeout(() => {
+        autoTriggerCooldown = false;
+      }, 4000);
     }
+
+    // Initialize camera, gate mode, and Gemini Live session on page load
+    window.addEventListener('load', () => {
+      applyGateModeStyles();
+      initKioskLiveCamera();
+      initGeminiLiveSession();
+    });
   </script>
 </body>
 </html>

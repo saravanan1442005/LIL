@@ -162,7 +162,7 @@ def create_document():
     r2.font.color.rgb = RGBColor(100, 116, 139)
     p.paragraph_format.space_after = Pt(28)
 
-    add_title("Eco Life Buddy: An AI-Based CCTV Monitoring System for Detecting Public Cleanliness and Waste Disposal Violations", space_after=14)
+    add_title("Eco Life Buddy: An AI-Based CCTV Intelligence System for Visitor Identification, Activity Tracking, and Safer, Cleaner Communities", space_after=14)
 
     p_idp = doc.add_paragraph()
     p_idp.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -261,7 +261,7 @@ def create_document():
 
     cert_text = (
         "Certified that this INNOVATIVE DESIGN PROJECT-I report titled “Eco Life Buddy: An AI-Based "
-        "CCTV Monitoring System for Detecting Public Cleanliness and Waste Disposal Violations” is the Bonafide "
+        "CCTV Intelligence System for Visitor Identification, Activity Tracking, and Safer, Cleaner Communities” is the Bonafide "
         "work of BALAJI R (2303412555921003), SARAVANAN S (2303412555922019), and VIGNESHAYYANAR M (2303412555922051) "
         "who carried out the 20CJPL701 - INNOVATIVE DESIGN PROJECT-I under my supervision."
     )
