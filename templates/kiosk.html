@@ -196,8 +196,8 @@
     <!-- LEFT COLUMN: Live Camera HUD & Voice Visualizer -->
     <div class="flex flex-col items-center justify-between text-center w-full lg:w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-card hover:shadow-card-hover transition-all overflow-hidden">
       
-      <!-- Live Camera Vision Viewfinder (Height capped to maintain viewport budget) -->
-      <div class="relative w-full aspect-16/10 max-h-[220px] md:max-h-[260px] lg:max-h-[280px] rounded-xl overflow-hidden border-2 border-brand-500/40 shadow-card bg-slate-950 flex items-center justify-center">
+      <!-- Live Camera Vision Viewfinder (Square 1:1 Aspect Ratio) -->
+      <div class="relative w-full max-w-[250px] md:max-w-[270px] lg:max-w-[280px] aspect-square mx-auto rounded-2xl overflow-hidden border-2 border-brand-500/40 shadow-card bg-slate-950 flex items-center justify-center shrink-0">
         <!-- Live Video Element -->
         <video id="kiosk-live-cam" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
         <canvas id="vision-canvas" class="hidden"></canvas>
